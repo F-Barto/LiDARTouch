@@ -1,0 +1,5 @@
+output_dir: /home/clear/fbartocc/output_data/depth_project
+gpus: 1
+nodes: 1
+fast_dev_run: False # if flag given, runs 1 batch of train, test and val to find any bugs
+mixed_precision: False # not implemented yet

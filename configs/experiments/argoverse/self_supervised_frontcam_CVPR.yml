@@ -1,0 +1,30 @@
+includes:
+  - ../base.yml
+
+defaults:
+  - model: monodepth18
+  - datasets: argoverse_frontcam_4beams
+  - optimizer: adam
+  - scheduler: StepLR
+  - losses: self_supervised
+
+
+log_images_interval: 200 # log images every X steps (used in val and test only)
+
+
+
+trainer:
+  accumulate_grad_batches: 2 # Accumulated gradients runs of K batches before doing a backwards pass.
+  max_epochs: 30
+
+dataloaders:
+  train:
+    batch_size: 4
+  val:
+    batch_size: 10
+  test:
+    batch_size: 10
+
+metrics:
+  crop: ~
+  max_depth: 120.0

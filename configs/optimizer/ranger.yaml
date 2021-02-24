@@ -1,0 +1,15 @@
+# Here the name is specific and loads the class from the python library 'Ranger'
+# see https://github.com/lessw2020/Ranger-Deep-Learning-Optimizer
+
+learning_rate: 9e-5
+
+optimizer:
+    name: Ranger
+    depth_net_options: # optimizer's options for the depth network
+      lr: ${learning_rate}
+      k: 6
+      use_gc: True # Gradient Centralization on/off https://arxiv.org/abs/2004.01461v2
+    pose_net_options: # optimizer's options for the pose network
+      lr: ${learning_rate}
+      k: 6
+      use_gc: True

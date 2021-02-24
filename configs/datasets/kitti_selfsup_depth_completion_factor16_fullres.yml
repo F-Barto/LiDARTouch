@@ -1,0 +1,32 @@
+kitti_root_dir: /home/clear/fbartocc/data/KITTI_raw
+gt_depth_root_dir: /home/clear/fbartocc/data/KITTI_DEPTH_COMPLETION/
+sparse_depth_root_dir: /home/clear/fbartocc/working_data/KITTI/MC_sparse_projected_lidar/factor_16
+data_split_dir: /home/clear/fbartocc/depth_project/Depth/data_splits
+
+datasets:
+    dataset_name: kitti
+
+    train:
+      source_views_indexes: [-1, 1]
+      kitti_root_dir: ${kitti_root_dir}
+      split_file_path: ${data_split_dir}/depth_completion_train.txt
+      sparse_depth_root_dir: ${sparse_depth_root_dir}
+      data_transform_options: # augmentation options
+        image_shape: [384, 1280] # original is [384, 1280]
+        jittering: [0.2, 0.2, 0.2, 0.05]
+
+    val:
+      kitti_root_dir: ${kitti_root_dir}
+      split_file_path: ${data_split_dir}/depth_completion_val.txt
+      sparse_depth_root_dir: ${sparse_depth_root_dir}
+      gt_depth_root_dir: ${gt_depth_root_dir}
+      data_transform_options: # augmentation options
+        image_shape: [384, 1280] # original is [384, 1280]
+
+    test:
+      kitti_root_dir: ${kitti_root_dir}
+      split_file_path: ${data_split_dir}/depth_completion_val.txt
+      sparse_depth_root_dir: ${sparse_depth_root_dir}
+      gt_depth_root_dir: ${gt_depth_root_dir}
+      data_transform_options: # augmentation options
+        image_shape: [384, 1280] # original is [384, 1280]

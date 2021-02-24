@@ -1,0 +1,7 @@
+includes:
+  - base.yml
+
+# up_beams_0_1_2_3_4_5_7_8_10_12_14_16_18_20_22_24_26_28_30
+project_name: SubmissionFrontCamMonocularDepthArgo_10_beams # will also be used as wandb project name
+experiment_name: self_supervised # will also be used as wandb experiment name, each run have a unique id
+

@@ -1,0 +1,28 @@
+channels:
+  - pytorch
+  - defaults
+  - conda-forge
+dependencies:
+  - python>=3.7
+  - cudatoolkit>=10.2 # for wathever reason cudatoolkit==10.1 raises ResolvePackageNotFound
+  - pytorch-nightly
+  - torchvision
+  - matplotlib
+  - pip:
+    - pytorch-lightning>=0.7.6
+    - watermark
+    - pytest
+    - opencv-python
+    - click
+    - wandb
+    - ruamel.yaml
+
+
+
+# for mixed precision training:
+# conda intall nvidia-apex pytorch>=1.3, <1.4  cudatoolkit>=10.1,<10.2 ?
+
+
+# conda install pytorch torchvision cudatoolkit=10.2 -c pytorch-nightly
+# pip install pytorch-lightning wandb ruamel.yaml opencv-python
+# conda install matplotlib

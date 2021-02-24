@@ -1,0 +1,8 @@
+includes:
+  - photometric_only.yml
+
+losses:
+    hinted:
+      supervised_num_scales: 4
+      supervised_method: reprojected  # original is sparse-silog
+      hinted_loss_weight: 1.0

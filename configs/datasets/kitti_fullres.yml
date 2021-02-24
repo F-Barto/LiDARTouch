@@ -1,0 +1,34 @@
+kitti_root_dir: /home/clear/fbartocc/data/KITTI_raw
+gt_depth_root_dir: /home/clear/fbartocc/data/KITTI_DEPTH_COMPLETION/
+sparse_depth_root_dir: /home/clear/fbartocc/data/KITTI_TRI_DEPTH/KITTI_raw_velodyne
+data_split_dir: /home/clear/fbartocc/depth_project/Depth/data_splits
+
+datasets:
+    dataset_name: kitti
+
+    train:
+      source_views_indexes: [-1, 1]
+      kitti_root_dir: ${kitti_root_dir}
+      split_file_path: ${data_split_dir}/eigen_train_files.txt
+      sparse_depth_root_dir: ${sparse_depth_root_dir}
+      data_transform_options: # augmentation options
+        image_shape: [384, 1280] # original is [384, 1280]
+        jittering: [0.2, 0.2, 0.2, 0.05]
+
+    val:
+      source_views_indexes: [] # val don't need the PoseNet
+      kitti_root_dir: ${kitti_root_dir}
+      split_file_path: ${data_split_dir}/filtered_eigen_val_files.txt
+      sparse_depth_root_dir: ${sparse_depth_root_dir}
+      gt_depth_root_dir: ${gt_depth_root_dir}
+      data_transform_options: # augmentation options
+        image_shape: [384, 1280]
+
+    test:
+      source_views_indexes: [] # test don't need the PoseNet
+      kitti_root_dir: ${kitti_root_dir}
+      split_file_path: ${data_split_dir}/filtered_eigen_test_files.txt
+      sparse_depth_root_dir: ${sparse_depth_root_dir}
+      gt_depth_root_dir: ${gt_depth_root_dir}
+      data_transform_options: # augmentation options
+        image_shape: [384, 1280]

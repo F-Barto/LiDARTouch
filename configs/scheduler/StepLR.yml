@@ -1,0 +1,8 @@
+# For each schedulers options, use torch.optim.lr_scheduler options name
+# see https://pytorch.org/docs/stable/optim.html#torch.optim.SGD.step
+
+scheduler:
+    name: StepLR
+    options:
+      step_size: 15
+      gamma: 0.1

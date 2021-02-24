@@ -1,0 +1,5 @@
+includes:
+  - base.yml
+
+project_name: Submission_CVPR # will also be used as wandb project name
+experiment_name: argo_transfer_4beams # will also be used as wandb experiment name, each run have a unique id

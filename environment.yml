@@ -1,0 +1,29 @@
+channels:
+  - pytorch
+  - defaults
+  - conda-forge
+dependencies:
+  - python>=3.7
+  - cudatoolkit>=10.1,<10.2 # for wathever reason cudatoolkit==10.1 raises ResolvePackageNotFound
+  - pytorch
+  - torchvision
+  - scikit-learn
+  - scikit-image
+  - scipy
+  - matplotlib
+  - h5py
+  - pandas
+  - jupyter
+  - pyntcloud
+  - pip:
+    - pytorch-lightning>=0.8.1
+    - watermark
+    - pytest
+    - omegaconf
+    - opencv-python
+    - seaborn
+    - click
+    - wandb
+    - ruamel.yaml
+    - git+https://github.com/lessw2020/Ranger-Deep-Learning-Optimizer # Radam + LookAhead
+    - git+https://github.com/LiyuanLucasLiu/RAdam.git # RAdam only

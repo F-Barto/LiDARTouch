@@ -1,0 +1,9 @@
+includes:
+  - photometric_only.yml
+
+losses:
+    masked: True
+    regression:
+      supervised_num_scales: 4
+      supervised_method: sparse-l1
+      supervised_loss_weight: 1.0

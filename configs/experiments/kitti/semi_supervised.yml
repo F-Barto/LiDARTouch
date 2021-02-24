@@ -1,0 +1,14 @@
+includes:
+  - self_supervised.yml
+
+defaults:
+  - model: monodepth50
+  - datasets: kitti
+  - optimizer: ranger
+  - scheduler: FlatCosAnnealScheduler
+  - losses: semi_supervised
+
+# These are the option for pytorch lightning's trainer
+# see https://pytorch-lightning.readthedocs.io/en/latest/trainer.html
+trainer:
+  max_epochs: 15

@@ -1,0 +1,16 @@
+input_channels: 3
+
+network:
+  tri_checkpoint_path: ???
+  depth_net:
+    name: selfsup_sparse2dense
+    options:
+      layers: 18
+      modality: rgbd
+      pretrained: False
+  pose_net:
+    name: monodepth2
+    options:
+      version: 18
+      activation: elu
+      input_channels: ${input_channels}

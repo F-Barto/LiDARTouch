@@ -1,0 +1,8 @@
+# triggers from schedulers.flat_cos_anneal_scheduler import FlatCosAnnealScheduler
+
+scheduler:
+    name: FlatCosAnnealScheduler
+    options:
+      anneal_start: 0.3
+      anneal_strategy: 'cos'
+      min_lr: 1e-5

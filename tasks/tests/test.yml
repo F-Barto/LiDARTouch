@@ -1,0 +1,21 @@
+default: &DEFAULT
+  batch_size: 100 # int
+  channels: [256 , 128, 10] # int list
+  metric: cosine # string
+  learning_rate: 1.0e-4 # float with exponant
+  decay_rate: 0.97 # float
+
+  model:
+    depth_net:
+      dropout: 0.5
+      version: XA
+
+large:
+  <<: *DEFAULT
+  channels: [512 , 256, 10] # modified int list
+  additional_param: test
+
+  model:
+    depth_net:
+      pretrained: True
+      num_layers: 18      # choices=[18, 34, 50, 101, 152]

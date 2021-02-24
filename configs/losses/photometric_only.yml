@@ -1,0 +1,15 @@
+losses:
+    masked: False
+    photo:
+      scales: 4                       # Number of inverse depth scales to use
+      ssim_loss_weight: 0.85          # SSIM loss weight
+      C1: 1e-4                        # SSIM parameter
+      C2: 9e-4                        # SSIM parameter
+      photometric_reduce_op: min      # Method for photometric loss reducing
+      clip_loss: 0.0                  # Clip loss threshold variance
+      padding_mode: zeros             # Photometric loss padding mode
+      automask_loss: True             # Automasking to remove static pixels
+
+    smoothness:
+      scales: 4
+      smooth_loss_weight: 0.1       # Smoothness loss weight

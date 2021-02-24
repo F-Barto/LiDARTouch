@@ -1,0 +1,6 @@
+includes:
+  - base.yml
+
+project_name: RandCamMonocularDepthArgo # will also be used as wandb project name
+experiment_name: self_supervised # will also be used as wandb experiment name, each run have a unique id
+

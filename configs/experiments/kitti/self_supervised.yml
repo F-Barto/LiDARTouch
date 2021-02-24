@@ -1,0 +1,10 @@
+includes:
+  - ../base.yml
+
+defaults:
+  - model: monodepth18
+  - datasets: kitti
+  - optimizer: ranger
+  - scheduler: FlatCosAnnealScheduler
+  - losses: self_supervised
+
