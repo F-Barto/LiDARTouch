@@ -12,6 +12,7 @@ from networks.nets.depth_nets.mfmp_symmetric import MFMPDepthNet
 from networks.nets.depth_nets.monodepth2 import DepthNetMonodepth2
 
 from networks.nets.pose_nets.monodepth2 import PoseResNet
+from networks.nets.depth_nets.ACMNet.net import DCOMPNet
 
 
 def select_depth_net(depth_net_name, depth_net_options, load_sparse_depth=False):
@@ -28,7 +29,8 @@ def select_depth_net(depth_net_name, depth_net_options, load_sparse_depth=False)
         'monodepth_original': OriginalDepthResNet,
         'guiding': GuidedDepthResNet,
         'sparse-guiding': GuidedSparseDepthResNet,
-        'selfsup_sparse2dense': DepthCompletionNet
+        'selfsup_sparse2dense': DepthCompletionNet,
+        'acmnet': DCOMPNet
     }
 
     if depth_net_name not in depth_nets:

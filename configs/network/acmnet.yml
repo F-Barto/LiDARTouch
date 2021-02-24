@@ -1,0 +1,17 @@
+input_channels: 3
+
+network:
+  #tri_checkpoint_path: ???
+  depth_net:
+    name: acmnet
+    options:
+      channels: 64
+      knn: [6, 6, 6]
+      nsamples: [10000, 5000, 2500]
+      scale: 80
+  pose_net:
+    name: monodepth2
+    options:
+      version: 18
+      activation: elu
+      input_channels: ${input_channels}

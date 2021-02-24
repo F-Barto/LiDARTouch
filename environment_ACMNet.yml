@@ -1,0 +1,23 @@
+channels:
+  - pytorch
+  - defaults
+  - conda-forge
+dependencies:
+  - python>=3.6.3,<3.7 # to avoid 3.6.0 issue https://github.com/pytorch/pytorch/issues/14931
+  - pip>=20.0
+  - pytorch>=1.2,<1.4
+  - torchvision==0.4
+  - cudatoolkit>=10.0,<10.1 # for wathever reason cudatoolkit==10.0 raises ResolvePackageNotFound
+  - scikit-learn
+  - scikit-image
+  - matplotlib
+  - jupyter
+  - pytorch-lightning==0.8.1
+  - pip:
+    - pillow
+    - omegaconf==2.0.0
+    - opencv-python
+    - opencv-contrib-python
+    - ruamel.yaml
+    - wandb
+
