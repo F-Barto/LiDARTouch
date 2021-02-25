@@ -20,7 +20,7 @@ from utils.wandb_logging import prepare_images_to_log as wandb_prep_images
 from utils.tensorboard_logging import prepare_images_to_log as tensorboard_prep_images
 
 from dataloaders.kitti import SequentialKittiLoader
-from dataloaders.randcam_argoverse import RandCamSequentialArgoverseLoader
+#from dataloaders.randcam_argoverse import RandCamSequentialArgoverseLoader
 from dataloaders.transforms import train_transforms, val_transforms, test_transforms
 
 TENSORBOARD_LOGGER_KEY = 'tensorboard'
@@ -30,7 +30,8 @@ def prepare_data(datasets_config, input_channels=3):
     terminal_logger.info("Preparing Datasets...")
 
     if datasets_config.dataset_name == 'rand_cam_argoverse':
-        dataset_cls = RandCamSequentialArgoverseLoader
+        # dataset_cls = RandCamSequentialArgoverseLoader
+        pass
     elif datasets_config.dataset_name == 'kitti':
         dataset_cls = SequentialKittiLoader
     else:
