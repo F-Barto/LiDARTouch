@@ -5,6 +5,7 @@ from networks.common.resnet_base import build_model
 from functools import partial
 
 from networks.extractors.lidar.resnet import LiDARResNetExtractor
+from networks.extractors.lidar.pointnet2 import PointNet2MRGExtractor
 
 
 def select_image_extractor(extractor_name, **kwargs):
@@ -22,6 +23,7 @@ def select_lidar_extractor(extractor_name, **kwargs):
 
     lidar_extractors = {
         'lidar-resnet': partial(build_model, LiDARResNetExtractor),
+        'pointnet2': PointNet2MRGExtractor
     }
 
     if extractor_name not in lidar_extractors: raise NotImplementedError(f'Invalid LiDAR extractor: {extractor_name}')

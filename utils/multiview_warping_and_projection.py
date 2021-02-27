@@ -4,6 +4,8 @@ from functools import lru_cache
 
 from utils.camera import Camera
 
+import torch_scatter
+
 
 @lru_cache(maxsize=None)
 def meshgrid(B, H, W, dtype, device, normalized=False):
@@ -179,6 +181,63 @@ def project(camera: Camera, X, frame='w'):
 
     # Return pixel coordinates
     return torch.stack([Xnorm, Ynorm], dim=-1).view(B, H, W, 2)
+
+
+def project_pc(camera: Camera, pc_features, pc_pos, pc_batch_idx, B, H, W):
+    """
+    Projects 3D points onto the image plane
+
+    Parameters
+    ----------
+    camera: utils.camera.Camera object
+        Camera object representing a pinhole model with all its intrinsics as attributes
+    pc_features : torch.Tensor [N,C]
+        features associates to each 3D points to be projected on camera plane
+    pc_pos : torch.Tensor [N,3]
+        coordinates 3D points in rectified camera frame to be projected on camera plane
+    pc_batch_idx : torch.Tensor [N,1]
+        batch index associated to each 3D points to be projected on camera plane
+    frame : 'w'
+        Reference frame: 'c' for camera and 'w' for world
+    Returns
+    -------
+    points : torch.Tensor [B,H,W,2]
+        2D projected points that are within the image boundaries
+    """
+    _, C = pc_features.shape
+
+    # Project 3D points onto the camera image plane
+
+    uv_map = camera.K[0] @ pc_pos.T # 3xN
+    uv_map = uv_map.T # Nx3
+    uv_map[:, :2] = uv_map[:, :2].int().float() # x and y from real to pixel coords
+
+    # filter out-of-frame coords
+    valid_mask = (uv_map[:, 0] < W) & (uv_map[:, 1] < H)
+    uv_map = uv_map[valid_mask]
+
+    X = uv_map[:, 0]  # N
+    Y = uv_map[:, 1]
+    Z = uv_map[:, 2]
+
+    # 3D-to-1D indexes  ->  Flat[x + HEIGHT * (y + DEPTH * z)] = Original[x, y, z]
+    flat_idxs = X.unsqueeze(-1) + H * (Y.unsqueeze(-1) + B * pc_batch_idx)  # N x 1
+
+    # maps each flat index to a unique index in [0, N-1]
+    _, inverse_idxs = flat_idxs[:,0].unique(return_inverse=True)
+
+    # see https://pytorch-scatter.readthedocs.io/en/1.3.0/functions/min.html
+    _, argmins = torch_scatter.scatter_max(Z, inverse_idxs)
+
+    filtered_uv_map = uv_map[argmins].long()
+    filtered_batch_idx = pc_batch_idx[argmins].long()
+    filtered_features = pc_features[argmins]
+
+    # project features on image
+    uv = pc_pos.new_zeros(B, C, H, W)  # same device and type as pc_pos
+    uv[filtered_batch_idx, :, filtered_uv_map[:, 1], filtered_uv_map[:, 0]] = filtered_features
+
+    return uv
 
 def reconstruct(camera: Camera, depth, frame='w'):
         """

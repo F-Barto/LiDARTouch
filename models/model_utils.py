@@ -10,6 +10,10 @@ from networks.legacy.monodepth_original.pose_res_net import PoseResNet as Origin
 from networks.nets.depth_nets.selfsup_sparse2dense import DepthCompletionNet
 from networks.nets.depth_nets.mfmp_symmetric import MFMPDepthNet
 from networks.nets.depth_nets.monodepth2 import DepthNetMonodepth2
+from networks.nets.depth_nets.feature_rescaling import FeatRescaling
+from networks.nets.depth_nets.disparity_rescaling import DispRescaling
+from networks.nets.depth_nets.spatial_attention import SpatialAttention
+from networks.nets.depth_nets.mfmp_pointnet import MFMPPointNet
 
 from networks.nets.pose_nets.monodepth2 import PoseResNet
 
@@ -28,7 +32,11 @@ def select_depth_net(depth_net_name, depth_net_options, load_sparse_depth=False)
         'monodepth_original': OriginalDepthResNet,
         'guiding': GuidedDepthResNet,
         'sparse-guiding': GuidedSparseDepthResNet,
-        'selfsup_sparse2dense': DepthCompletionNet
+        'selfsup_sparse2dense': DepthCompletionNet,
+        'feature_rescaling': FeatRescaling,
+        'disparity_rescaling': DispRescaling,
+        'spatial_attention': SpatialAttention,
+        'MFMP_PointNet': MFMPPointNet,
     }
 
     if depth_net_name not in depth_nets:

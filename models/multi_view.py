@@ -18,6 +18,8 @@ import torch
 from pytorch_lightning import _logger as terminal_logger
 from pytorch_lightning.core.decorators import auto_move_data
 
+from torch_geometric.data import Batch
+
 from models.model_utils import select_depth_net, select_pose_net
 
 from losses.handlers.multiview_loss_handler import MultiViewLossHandler
@@ -110,7 +112,7 @@ class MultiViewModel(BaseModel):
         return losses, metrics
 
 
-    def compute_inv_depths(self, image, sparse_depth=None, intrinsics=None):
+    def compute_inv_depths(self, image, sparse_depth=None, sparse_pc=None, intrinsics=None):
         """Computes inverse depth maps from single images"""
 
         flip = random.random() < 0.5 if self.training else False
@@ -118,8 +120,16 @@ class MultiViewModel(BaseModel):
         if flip:
             image = flip_lr(image) if self.depth_net.require_image_input else image
             sparse_depth = flip_lr(sparse_depth) if self.depth_net.require_lidar_input else sparse_depth
+            if sparse_pc is not None:
+                sparse_pc.pos[:,0] = -sparse_pc.pos[:,0]
 
-        if self.depth_net.require_lidar_input and self.depth_net.require_image_input \
+        if not self.depth_net.require_lidar_input and self.depth_net.require_image_input \
+                and hasattr(self.depth_net, 'require_pc_input'):
+            if hasattr(self.depth_net, 'require_intrinsics'):
+                output = self.depth_net(image, sparse_pc, intrinsics)
+            else:
+                output = self.depth_net(image, sparse_pc)
+        elif self.depth_net.require_lidar_input and self.depth_net.require_image_input \
                 and hasattr(self.depth_net, 'require_intrinsics'):
             output = self.depth_net(image, sparse_depth, intrinsics)
         elif self.depth_net.require_lidar_input and self.depth_net.require_image_input:
@@ -217,7 +227,11 @@ class MultiViewModel(BaseModel):
         """
 
         sparse_lidar = batch.get('sparse_projected_lidar', None)
-        output = self.compute_inv_depths(batch['target_view'], sparse_depth=sparse_lidar, intrinsics=batch['intrinsics'])
+        sparse_pc = batch.get('sparse_lidar_pc', None)
+        if sparse_pc is not None:
+            sparse_pc = sparse_pc.to(batch['target_view'].device)
+        output = self.compute_inv_depths(batch['target_view'], sparse_depth=sparse_lidar,
+                                         sparse_pc=sparse_pc, intrinsics=batch['intrinsics'])
 
         if 'poses_pnp' in batch:
             pose_vec = batch['poses_pnp'].float()

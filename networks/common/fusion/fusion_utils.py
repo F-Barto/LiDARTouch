@@ -1,5 +1,7 @@
 from networks.common.fusion.elem_wise_fusions import ElemWiseMultFusion, ElemWiseSumFusion
+from networks.common.fusion.spatial_attention import SpatialAttentionFusion
 from networks.common.fusion.concat import ConcatFusion
+from networks.common.fusion.project_squeeze_fuse import ProjectSqueezeFuse
 
 import numpy as np
 
@@ -9,6 +11,8 @@ def select_fusion_module(fusion_name):
         'mult': ElemWiseMultFusion,
         'sum': ElemWiseSumFusion,
         'concat': ConcatFusion,
+        'spatial': SpatialAttentionFusion,
+        'project_squeeze_fuse': ProjectSqueezeFuse
     }
 
     if fusion_name not in fusions: raise NotImplementedError(f'Invalid image extractor: {fusion_name}')
@@ -26,6 +30,8 @@ def get_ch_post_fusion(fusion_name, lidar_ch_enc, image_ch_enc):
         'mult': max_between_twos,
         'sum': max_between_twos,
         'concat': lidar_ch_enc + image_ch_enc,
+        'spatial': max_between_twos,
+        'project_squeeze_fuse': max_between_twos,
     }
 
     if fusion_name not in fusions: raise NotImplementedError(f'Invalid image extractor: {fusion_name}')

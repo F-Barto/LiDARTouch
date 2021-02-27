@@ -11,10 +11,11 @@ What data to use (train_dataloader, val_dataloader, test_dataloader)
 '''
 
 import torch
-from torch.utils.data import DataLoader
 
 import pytorch_lightning as pl
 from pytorch_lightning import _logger as terminal_logger
+
+from models.geometric_dataloader import DataLoader
 
 from utils.wandb_logging import prepare_images_to_log as wandb_prep_images
 from utils.tensorboard_logging import prepare_images_to_log as tensorboard_prep_images

@@ -20,12 +20,14 @@ In this module, the docstring follows the NumPy/SciPy formatting rules.
 import numpy as np
 from PIL import Image
 from pathlib import Path
+from random import sample as rand_sample_list
 
 from torch.utils.data import Dataset
 from pytorch_lightning import _logger as terminal_logger
 from dataloaders.kitti_pose_utils import KITTIRawOxts
 from utils.pose_estimator import get_pose_pnp
 
+from torch_geometric.data import Data
 
 KITTI_RAW_LEFT_STEREO_IMAGE_DIR = 'image_02/data'
 PROJECTED_VELODYNE_DIR = 'proj_depth/velodyne'
@@ -54,7 +56,8 @@ class SequentialKittiLoader(Dataset):
 
     def __init__(self, kitti_root_dir, split_file_path, gt_depth_root_dir=None, sparse_depth_root_dir=None,
                  data_transform=None, data_transform_options=None, source_views_indexes=None, random_source=0,
-                 load_pose=False, eval_on_sparse=False, depth_completion=False, input_channels=3, use_pnp=False):
+                 load_pose=False, eval_on_sparse=False, depth_completion=False, input_channels=3, use_pnp=False,
+                 sparse_pc_root_dir=None):
 
         """
         Parameters
@@ -91,6 +94,7 @@ class SequentialKittiLoader(Dataset):
         self.input_channels = {1: 'gray', 3: 'rgb'}[input_channels]
 
         self.use_pnp = use_pnp
+        self.sparse_pc_root_dir = sparse_pc_root_dir
 
         if depth_completion:
             assert gt_depth_root_dir is not None
@@ -445,6 +449,14 @@ class SequentialKittiLoader(Dataset):
             raise
         return np.expand_dims(depth, axis=2)
 
+    def read_npz_pc(self, file):
+        try:
+            pc_data = np.load(file)['pc_data'].astype(np.float32)
+        except:
+            print(file)
+            raise
+        return pc_data
+
 
     def read_png_depth(self, file, resize=None):
         """Reads a .png depth map anbd optionally resize it."""
@@ -501,6 +513,18 @@ class SequentialKittiLoader(Dataset):
 
             depth = self.read_npz_depth(str(depth_path))
             sample['sparse_projected_lidar'] =  depth
+
+        if self.sparse_pc_root_dir is not None:
+            pc_path = Path(self.sparse_pc_root_dir) / capture_date \
+                         / f"{capture_date}_drive_{sequence_idx}_sync" / PROJECTED_VELODYNE_DIR / camera_name \
+                         / f"{frame_idx}.npz"
+
+            pc_data = self.read_npz_pc(str(pc_path))
+            pos = pc_data[:,:3]
+            features = np.stack([pc_data[:,2],pc_data[:,3]], axis=1)
+            num_nodes = pc_data.shape[0]
+            pc_data = Data(pos=pos, x=features, num_nodes=num_nodes)
+            sample['sparse_lidar_pc'] = pc_data
 
         if self.use_pnp:
             pnp_poses = []

@@ -13,6 +13,7 @@ SOURCE_VIEWS = 'source_views'
 GT_DEPTH = 'projected_lidar'
 SPARSE_DEPTH = 'sparse_projected_lidar'
 DEPTH_KEYS = [GT_DEPTH, SPARSE_DEPTH]
+PC_KEY = 'sparse_lidar_pc'
 INTRINSICS = 'intrinsics'
 
 
@@ -436,6 +437,10 @@ def to_tensor_sample(sample, tensor_type='torch.FloatTensor'):
     for key in [SOURCE_VIEWS, SOURCE_VIEWS + '_original']:
         if sample.get(key) is not None:
             sample[key] = [to_tensor(source_view, tensor_type) for source_view in sample[key]]
+
+    if sample.get(PC_KEY) is not None:
+        sample[PC_KEY].x = torch.as_tensor(sample[PC_KEY].x)
+        sample[PC_KEY].pos = torch.as_tensor(sample[PC_KEY].pos)
 
     # Return converted sample
     return sample
