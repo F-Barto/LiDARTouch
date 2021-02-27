@@ -10,6 +10,7 @@ from utils.depth import inv2depth
 from losses.loss_base import LossBase
 from losses.handlers.handler_base import LossHandler
 
+import sys
 
 class MultiViewLossHandler(LossHandler, LossBase):
     """
@@ -219,6 +220,17 @@ class MultiViewLossHandler(LossHandler, LossBase):
             self.merge_metrics(self.smoothness_loss_handler)
 
         total_loss = sum(losses)
+
+        if torch.isnan(total_loss):
+            total_loss = torch.zeros_like(total_loss, requires_grad=True)
+
+            print('*'*30, file=sys.stderr)
+            print('Nan error detected', file=sys.stderr)
+            print('losses:', losses, file=sys.stderr)
+            for pose in poses:
+                print(pose.mat, file=sys.stderr)
+            print('*'*30, file=sys.stderr)
+
 
         # Return losses and metrics
         return {

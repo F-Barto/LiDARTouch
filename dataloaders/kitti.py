@@ -53,8 +53,8 @@ class SequentialKittiLoader(Dataset):
     """
 
     def __init__(self, kitti_root_dir, split_file_path, gt_depth_root_dir=None, sparse_depth_root_dir=None,
-                 data_transform=None, data_transform_options=None, source_views_indexes=None, load_pose=False,
-                 eval_on_sparse=False, depth_completion=False, input_channels=3, use_pnp=False):
+                 data_transform=None, data_transform_options=None, source_views_indexes=None, random_source=0,
+                 load_pose=False, eval_on_sparse=False, depth_completion=False, input_channels=3, use_pnp=False):
 
         """
         Parameters
@@ -132,6 +132,9 @@ class SequentialKittiLoader(Dataset):
                               f"yours: {source_views_indexes}"
         if self.source_views_requested:
             assert 0 not in source_views_indexes, src_indexes_err_msg
+            assert random_source < len(source_views_indexes)
+
+        self.random_source = random_source
 
         self.split_name = Path(split_file_path).stem # used in __getitem__
 
@@ -464,6 +467,9 @@ class SequentialKittiLoader(Dataset):
             img = img.convert('L')
 
         sample = {'target_view': img, 'idx': idx}
+
+        if self.random_source > 0:
+            source_views_paths = rand_sample_list(source_views_paths,self.random_source)
 
         if self.source_views_requested:
             source_views_imgs = [Image.open(path) for path in source_views_paths]

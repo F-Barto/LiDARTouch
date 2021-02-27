@@ -3,6 +3,7 @@ import torch
 from losses.elements.supervised_loss import SupervisedLoss, ReprojectedLoss
 from losses.loss_base import LossBase
 
+
 class HintedLoss(LossBase):
     def __init__(self, supervised_method='reprojected', hinted_loss_weight=1.0, supervised_num_scales=4):
         super().__init__()

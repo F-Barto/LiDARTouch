@@ -221,8 +221,8 @@ class FullySupervisedModel(BaseModel):
         """
         output = self(batch)
 
-        log_losses = output['loss']
-        log_metrics = copy.deepcopy(output['metrics'])
+        log_losses = output['loss'].detach().clone()
+        log_metrics = {k: v.detach().clone() for k, v in output['metrics'].items()}
 
         logs = self.log_train(log_losses, log_metrics)
 
