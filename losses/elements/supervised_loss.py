@@ -4,7 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
-
+import sys
 
 from utils.image import match_scales
 from utils.camera import Camera
@@ -148,8 +148,19 @@ class SupervisedLoss(LossBase):
                 masked_gt_inv_depth = gt_inv_depths[i][mask]
 
                 loss = self.loss_func(masked_inv_depth, masked_gt_inv_depth)
-                losses.append(loss)
 
+                if torch.isnan(loss) and len(masked_inv_depth) == 0:
+                    loss = torch.zeros_like(loss, requires_grad=True)
+                    # if mask is all false -> masked_inv_depth & masked_gt_inv_depth == Tensor([]) -> loss_func returns nan
+                    if len(masked_inv_depth) == 0:
+                        pass
+                    else:
+                        print('masked_inv_depth: ', masked_inv_depth, file=sys.stderr)
+                        print('len(masked_inv_depth): ', len(masked_inv_depth), file=sys.stderr)
+                        print('supervised loss: ', loss, file=sys.stderr)
+
+
+                losses.append(loss)
 
         # Return per-scale average loss
         return losses
