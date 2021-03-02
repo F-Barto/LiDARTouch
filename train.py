@@ -174,9 +174,6 @@ if __name__ == '__main__':
     # parse params
     args = parser.parse_args()
 
-    import os
-    print("OAR_JOB_ID:", os.environ['OAR_JOB_ID'])
-
     print()
     print('=' * 30, " PROJECT CONFIG", '=' * 30)
 
