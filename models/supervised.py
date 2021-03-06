@@ -51,7 +51,10 @@ class FullySupervisedModel(BaseModel):
 
         ################### Losses Definition #####################
 
-        losses_handler = LossHandler(self.hparams.losses).parse_all_losses()
+        # handlers use pop operation so copy
+        losses_hparams = copy.deepcopy(self.hparams.losses)
+
+        losses_handler = LossHandler(losses_hparams).parse_all_losses()
 
         self.regression_loss_handler = None
         if 'regression' in losses_handler:

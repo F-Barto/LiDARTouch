@@ -21,6 +21,7 @@ python ./lidar_sparsification.py \
 
 def project_and_save(img_sizes, projective_matrixes, R_rect_00s, extrinsics, kitti_raw_root_dir,
                      output_sparse_depth_dir, downsample_factor, downsample_indexes, line):
+
     capture_date, data_dir, camera, filename = get_meta(line)
 
     height, width = img_sizes[capture_date]
@@ -38,6 +39,7 @@ def project_and_save(img_sizes, projective_matrixes, R_rect_00s, extrinsics, kit
                                                           downsample_indexes=downsample_indexes)
         sparsified_pts_3d, sparsified_pts_reflectances = sparsified_data[:, :3], sparsified_data[:, -1]
     except:
+        print(str(pc_file_path))
         return pc_file_path
 
     h_pts_3d = np.pad(sparsified_pts_3d, ((0, 0), (0, 1)), constant_values=1)
@@ -105,6 +107,7 @@ def main(kitti_raw_root_dir, output_dir, data_split_dir, downsample_indexes=None
     lines = []
     for split_file_name in split_file_names:
         split_file_path = data_split_dir / split_file_name
+        assert split_file_path.exists(), split_file_path
 
         lines += split_file_path.read_text().rsplit()
 
@@ -116,10 +119,10 @@ def main(kitti_raw_root_dir, output_dir, data_split_dir, downsample_indexes=None
         R_rect_00s.update(Rs)
 
         extrinsics.update(get_extrinsics_for_used_capture_dates(used_capture_dates, kitti_raw_root_dir))
-    lines = list(set(lines))
+    lines = sorted(list(set(lines)))
 
     args = (img_sizes, projective_matrices, R_rect_00s, extrinsics, kitti_raw_root_dir, output_sparse_depth_dir,
-            downsample_indexes, downsample_factor)
+            downsample_factor, downsample_indexes)
     f = partial(project_and_save, *args)
 
     tqdm_lines = tqdm(lines, total=len(lines))
@@ -130,7 +133,7 @@ def main(kitti_raw_root_dir, output_dir, data_split_dir, downsample_indexes=None
     o = [str(x) for x in o if x is not None]
 
     if len(o) > 0:
-        lines = '/n'.join(o)
+        lines = '\n'.join(o)
         with open('./failed_downsamples_log.txt', 'w') as log_file:
             log_file.write(lines)
 

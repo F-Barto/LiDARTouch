@@ -395,7 +395,6 @@ def downsample_scan(velo, tx, ty, tz, roll, pitch, yaw, downsample_factor=None, 
     'Choose either downsample_factor or downsample_indexes'
 
     x, y, z, r = velo[:, 0], velo[:, 1], velo[:, 2], velo[:, 3]
-    dist_horizontal = (x ** 2 + y ** 2) ** 0.5
     # angles between the start of the scan (towards the rear)
     horizontal_degree = np.rad2deg(np.arctan2(y, x))
     horizontal_degree = wrap_to_0_360(horizontal_degree)
@@ -407,7 +406,7 @@ def downsample_scan(velo, tx, ty, tz, roll, pitch, yaw, downsample_factor=None, 
 
     # note that sometimes not all 64 scans show up in the image space
     if downsample_indexes is not None:
-        assert isinstance(downsample_indexes, list) and len(downsample_indexes) > 0
+        assert len(downsample_indexes) > 0
         indexes = downsample_indexes
     elif downsample_factor is not None and downsample_factor > 1:
         indexes = range(num_scans - downsample_factor // 2, -1, -downsample_factor)

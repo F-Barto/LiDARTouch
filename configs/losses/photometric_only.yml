@@ -12,4 +12,4 @@ losses:
 
     smoothness:
       scales: 4
-      smooth_loss_weight: 0.1       # Smoothness loss weight
+      smooth_loss_weight: 0.001       # Smoothness loss weight
