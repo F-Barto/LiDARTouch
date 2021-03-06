@@ -1,0 +1,6 @@
+includes:
+  - photometric_only.yml
+
+losses:
+    velocity:
+      velocity_loss_weight: 1.0

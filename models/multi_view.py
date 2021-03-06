@@ -46,7 +46,7 @@ class MultiViewModel(BaseModel):
                                           self.train_dataset.load_sparse_depth)
 
         # Pose Net
-        if hasattr(self.hparams.datasets.train, 'use_pnp') and self.hparams.datasets.train.use_pnp:
+        if self.train_dataset.use_pnp and not self.train_dataset.load_pose:
             self.pose_net = None
         else:
             self.pose_net = select_pose_net(self.hparams.network.pose_net.name, hparams.network.pose_net.options)
@@ -81,6 +81,8 @@ class MultiViewModel(BaseModel):
         losses = []
         metrics = {}
 
+        failure_checks = batch.get('failure_checks', None)
+
         mv_outputs = self.multi_view_loss_handler(
             batch['target_view_original'],
             batch['source_views_original'],
@@ -88,6 +90,7 @@ class MultiViewModel(BaseModel):
             batch['intrinsics'],
             poses_preds,
             batch['sparse_projected_lidar_original'],
+            failure_checks=failure_checks,
             progress=progress
         )
 
@@ -217,9 +220,10 @@ class MultiViewModel(BaseModel):
         """
 
         sparse_lidar = batch.get('sparse_projected_lidar', None)
-        output = self.compute_inv_depths(batch['target_view'], sparse_depth=sparse_lidar, intrinsics=batch['intrinsics'])
+        output = self.compute_inv_depths(batch['target_view'], sparse_depth=sparse_lidar, 
+                                         intrinsics=batch['intrinsics'])
 
-        if 'poses_pnp' in batch:
+        if 'poses_pnp' in batch and not 'translation_magnitudes' in batch:
             pose_vec = batch['poses_pnp'].float()
             poses = [Pose.from_vec(pose_vec[:, i], self.rotation_mode) for i in range(pose_vec.shape[1])]
         elif 'source_views' in batch and self.pose_net is not None:

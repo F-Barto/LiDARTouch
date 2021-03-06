@@ -149,16 +149,15 @@ class SupervisedLoss(LossBase):
 
                 loss = self.loss_func(masked_inv_depth, masked_gt_inv_depth)
 
-                if torch.isnan(loss) and len(masked_inv_depth) == 0:
-                    loss = torch.zeros_like(loss, requires_grad=True)
-                    # if mask is all false -> masked_inv_depth & masked_gt_inv_depth == Tensor([]) -> loss_func returns nan
-                    if len(masked_inv_depth) == 0:
-                        pass
-                    else:
+                if torch.isnan(loss):
+                    # if mask is all false
+                    # -> masked_inv_depth & masked_gt_inv_depth == Tensor([]) -> loss_func returns nan
+                    # Such case is okay, otherwise there is an issue with the preds so we print it
+                    if not len(masked_inv_depth) == 0:
                         print('masked_inv_depth: ', masked_inv_depth, file=sys.stderr)
                         print('len(masked_inv_depth): ', len(masked_inv_depth), file=sys.stderr)
                         print('supervised loss: ', loss, file=sys.stderr)
-
+                    loss = torch.zeros_like(loss, requires_grad=True)
 
                 losses.append(loss)
 

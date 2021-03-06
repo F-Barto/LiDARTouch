@@ -106,7 +106,7 @@ class MultiViewLossHandler(LossHandler, LossBase):
 
         return [self.warp_ref_image(depths[i], ref_image, K, ref_K, pose) for i in range(self.n)]
 
-    def reduce_loss(self, losses, name, reduce_op='min', mask=None):
+    def reduce_loss(self, losses, name, reduce_op='min', mask=None, failure_masks=None):
         """
         Combine the loss from all context images
         Parameters
@@ -120,8 +120,17 @@ class MultiViewLossHandler(LossHandler, LossBase):
         """
 
         # Reduce function
-        def reduce_function(losses):
-            if reduce_op == 'mean':
+        def reduce_function(losses, failure_mask=None):
+            if failure_mask is not None:
+                cat = torch.cat(losses, 1)
+                masked_cat = cat + 1000 * failure_mask
+                argmins = masked_cat.argmin(1, True)
+                out = cat.gather(1, argmins)
+                if mask is not None:
+                    out = out[mask]
+                return out.mean()
+
+            elif reduce_op == 'mean':
                 return sum([l.mean() for l in losses]) / len(losses)
             elif reduce_op == 'min':
                 if mask is None:
@@ -132,13 +141,17 @@ class MultiViewLossHandler(LossHandler, LossBase):
                 raise NotImplementedError(f'Unknown reduce_op: {reduce_op}')
 
         # Reduce photometric loss
-        reduced_loss = sum([reduce_function(losses[i]) for i in range(self.n)]) / self.n
+        if failure_masks is not None:
+            reduced_loss = sum([reduce_function(losses[i], failure_masks[i]) for i in range(self.n)]) / self.n
+        else:
+            reduced_loss = sum([reduce_function(losses[i]) for i in range(self.n)]) / self.n
         # Store and return reduced photometric loss
         self.add_metric(name, reduced_loss)
         return reduced_loss
 
 
-    def forward(self, target_view, source_views, inv_depths, K, poses, gt_depth=None, progress=0.0):
+    def forward(self, target_view, source_views, inv_depths, K, poses, gt_depth=None, failure_checks=None,
+                progress=0.0):
         """
         Calculates training supervised loss.
 
@@ -160,6 +173,28 @@ class MultiViewLossHandler(LossHandler, LossBase):
         #self.n = self.progressive_scaling(progress)
 
         photometric_losses = [[] for _ in range(self.n)] # Container for losses computed with estimpated depth
+        hinted_failure_masks=None
+        failure_masks = None
+        if failure_checks is not None:
+            failure_masks = []
+            hinted_failure_masks = []
+            for i in range(self.n):
+                b, _, h, w = inv_depths[i].shape
+                n = len(poses)
+                base_failure_mask = failure_checks.unsqueeze(-1).unsqueeze(-1).expand((b, n, h, w))
+                copy = 1
+                if self.photo_loss_handler.automask_loss:
+                    copy += 1
+                failure_mask = torch.repeat_interleave(base_failure_mask, copy, dim=1)
+                # e,g: for len(poses) = 2
+                # failure_mask: [photo1,automask1,photo2,automask2]
+                failure_masks.append(failure_mask)
+                if self.hinted_loss_handler is not None:
+                    failure_mask = torch.cat([base_failure_mask, failure_mask], dim=1)
+                    hinted_failure_masks.append(failure_mask)
+                    # e,g: for len(poses) = 2
+                    # hinted_failure_mask: [gt_photo1,gt_photo2,photo1,automask1,photo2,automask2]
+
 
         target_images = match_scales(target_view, inv_depths, self.n)
         depths = [inv2depth(inv_depths[i]) for i in range(self.n)]
@@ -203,14 +238,14 @@ class MultiViewLossHandler(LossHandler, LossBase):
         if self.masked:
             assert gt_depth is not None, "Ground Truth depth is required as input to mask photo loss on LiDAR points"
             mask = (gt_depth > 0).detach()
-        photo_loss = self.reduce_loss(photometric_losses, 'photometric_loss', mask=mask)
+        photo_loss = self.reduce_loss(photometric_losses, 'photometric_loss', mask=mask, failure_masks=failure_masks)
 
         # make a list as in-place sum is not auto-grad friendly
         losses = [photo_loss]
 
         if self.hinted_loss_handler is not None:
-            depth_hints_loss = self.hinted_loss_handler(photometric_losses, gt_photometric_losses,
-                                                        inv_depths, gt_depths, K, poses)
+            depth_hints_loss = self.hinted_loss_handler(photometric_losses, gt_photometric_losses, inv_depths,
+                                                        gt_depths, K, poses, failure_masks=hinted_failure_masks)
             losses.append(depth_hints_loss)
             self.merge_metrics(self.hinted_loss_handler)
 
@@ -224,13 +259,15 @@ class MultiViewLossHandler(LossHandler, LossBase):
         if torch.isnan(total_loss):
             total_loss = torch.zeros_like(total_loss, requires_grad=True)
 
-            print('*'*30, file=sys.stderr)
-            print('Nan error detected', file=sys.stderr)
             print('losses:', losses, file=sys.stderr)
-            for pose in poses:
+            print('Nan error detected', file=sys.stderr)
+            for i,inv_depth in enumerate(inv_depths):
+                print(f'scale {i} mean_inv_depth:\n {inv_depth.mean(2, True).mean(3, True)}', file=sys.stderr)
+                print(f'scale {i} inv_depth:\n {inv_depths}', file=sys.stderr)
+            for i,pose in enumerate(poses):
+                print('pose ',i, file=sys.stderr)
                 print(pose.mat, file=sys.stderr)
             print('*'*30, file=sys.stderr)
-
 
         # Return losses and metrics
         return {

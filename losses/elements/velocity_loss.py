@@ -1,6 +1,7 @@
 # Adapted from https://github.com/TRI-ML/packnet-sfm/blob/master/packnet_sfm/losses/velocity_loss.py
 
 from losses.loss_base import LossBase
+import torch
 
 class VelocityLoss(LossBase):
     """
@@ -12,7 +13,7 @@ class VelocityLoss(LossBase):
         self.velocity_loss_weight = velocity_loss_weight
 
 
-    def forward(self, pred_poses, translation_magnitudes):
+    def forward(self, pred_poses, translation_magnitudes, failure_checks=None):
             """
             Calculates velocity loss.
             Parameters
@@ -26,10 +27,18 @@ class VelocityLoss(LossBase):
             losses_and_metrics : dict
                 Output dictionary
             """
+
             pred_trans = [pose.mat[:, :3, -1].norm(dim=-1) for pose in pred_poses]
+            pred_trans = torch.stack(pred_trans, dim=1)
+
+            n = translation_magnitudes.numel()
+            if failure_checks is not None:
+                n = failure_checks.sum()
+                translation_magnitudes = translation_magnitudes * failure_checks
+
             # Calculate velocity supervision loss
-            loss = sum([(pred - gt).abs().mean()
-                        for pred, gt in zip(pred_trans, translation_magnitudes)]) / len(translation_magnitudes)
+            loss = (pred_trans - translation_magnitudes).abs().sum() / n
+
             self.add_metric('velocity_loss', loss)
             return {
                 'loss': loss.unsqueeze(0) * self.velocity_loss_weight,

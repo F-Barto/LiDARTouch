@@ -20,6 +20,8 @@ In this module, the docstring follows the NumPy/SciPy formatting rules.
 import numpy as np
 from PIL import Image
 from pathlib import Path
+from random import sample as rand_sample_list
+import pickle
 
 from torch.utils.data import Dataset
 from pytorch_lightning import _logger as terminal_logger
@@ -54,7 +56,8 @@ class SequentialKittiLoader(Dataset):
 
     def __init__(self, kitti_root_dir, split_file_path, gt_depth_root_dir=None, sparse_depth_root_dir=None,
                  data_transform=None, data_transform_options=None, source_views_indexes=None, random_source=0,
-                 load_pose=False, eval_on_sparse=False, depth_completion=False, input_channels=3, use_pnp=False):
+                 load_pose=False, eval_on_sparse=False, depth_completion=False, input_channels=3, use_pnp=False,
+                 pnp_pickled_data=None):
 
         """
         Parameters
@@ -90,7 +93,20 @@ class SequentialKittiLoader(Dataset):
         assert input_channels in [1,3]
         self.input_channels = {1: 'gray', 3: 'rgb'}[input_channels]
 
+        self.kitti_root_dir = Path(kitti_root_dir).expanduser()
+
+        self.split_name = Path(split_file_path).stem  # used in __getitem__
+
         self.use_pnp = use_pnp
+        if self.use_pnp:
+            assert sparse_depth_root_dir is not None, 'need depth input to compute PnP'
+            terminal_logger.info('Loading pose with PnP')
+
+            self.pnp_pickled_data = None
+            if pnp_pickled_data is not None:
+                terminal_logger.info(f'Loading PnP pose data from {pnp_pickled_data}')
+                with open(pnp_pickled_data, 'rb') as f:
+                    self.pnp_pickled_data = pickle.load(f)
 
         if depth_completion:
             assert gt_depth_root_dir is not None
@@ -136,11 +152,8 @@ class SequentialKittiLoader(Dataset):
 
         self.random_source = random_source
 
-        self.split_name = Path(split_file_path).stem # used in __getitem__
-
-        self.kitti_root_dir = Path(kitti_root_dir).expanduser()
         self.load_pose = load_pose
-        if self.load_pose:
+        if self.load_pose and not self.use_pnp:
             self.oxts_reader = KITTIRawOxts()
 
         self.intrinsics = self.get_intrinsics_for_all_sequences(split_file_path)
@@ -177,14 +190,9 @@ class SequentialKittiLoader(Dataset):
         list
             A list of absolute path that can be used to load the corresponding data sample
         """
-        with Path(split_file_path).open() as split_file:
-            relative_paths = split_file.readlines()
+        relative_paths = Path(split_file_path).read_text().rsplit()
 
-        img_paths = []
-        for i, relative_path in enumerate(relative_paths):
-            img_path = self.kitti_root_dir / relative_path.split()[0]
-
-            img_paths.append(str(img_path))
+        img_paths = [self.kitti_root_dir / relative_path for relative_path in relative_paths]
 
         terminal_logger.info(f'{len(img_paths)} listed files in the split file {self.split_name}.')
 
@@ -477,10 +485,6 @@ class SequentialKittiLoader(Dataset):
                 source_views_imgs = [source_views_img.convert('L') for source_views_img in source_views_imgs]
             sample['source_views'] = source_views_imgs
 
-        if self.load_pose:
-            sample['translation_magnitudes'] = \
-                self.oxts_reader.get_magnitude_between_pairs(img_path, source_views_paths)
-
         # e.g., img_path == path_to_dataset_root_dir/2011_09_26/2011_09_26_drive_0048_sync/image_02/data/0000000085.png
         camera_name = Path(img_path).parents[1].name # image_02
         capture_date = Path(img_path).parents[3].name # 2011_09_26
@@ -503,23 +507,40 @@ class SequentialKittiLoader(Dataset):
             sample['sparse_projected_lidar'] =  depth
 
         if self.use_pnp:
-            pnp_poses = []
-            for i, source_view_img in enumerate(source_views_imgs):
-                success, r_vec, t_vec = get_pose_pnp(np.array(img),
-                                                     np.array(source_view_img),
-                                                     sample['sparse_projected_lidar'],
-                                                     K)
-                # discard if translation is too small
-                success = success and np.linalg.norm(t_vec) > 0.15
-                if success:
-                    vec = np.concatenate([t_vec, r_vec], axis=0).flatten()
-                else:
-                    # return the same image and no motion when PnP fails
-                    sample['source_views'][i] = img
-                    vec = np.zeros(6)
-                pnp_poses.append(vec)
-            sample['poses_pnp'] = np.stack(pnp_poses, axis=0)
 
+            if self.pnp_pickled_data is not None:
+                _, pose_vecs, successes, translation_magnitudes = self.pnp_pickled_data[idx]
+                sample['poses_pnp'] = pose_vecs
+                sample['failure_checks'] = successes
+                if self.load_pose:
+                    sample['translation_magnitudes'] = translation_magnitudes
+            else:
+                pnp_poses = []
+                failure_checks = []
+                for i, source_view_img in enumerate(source_views_imgs):
+                    success, r_vec, t_vec = get_pose_pnp(np.array(img),
+                                                         np.array(source_view_img),
+                                                         sample['sparse_projected_lidar'],
+                                                         K)
+                    # discard if translation is too small
+                    success = success and np.linalg.norm(t_vec) > 0.15
+                    if success:
+                        vec = np.concatenate([t_vec, r_vec], axis=0).flatten()
+                        failure_checks.append(0)
+                    else:
+                        # return the same image and no motion when PnP fails
+                        sample['source_views'][i] = img
+                        vec = np.zeros(6)
+                        failure_checks.append(1)
+                    pnp_poses.append(vec)
+                sample['poses_pnp'] = np.stack(pnp_poses, axis=0)
+                sample['failure_checks'] = np.stack(failure_checks, axis=0)
+                if self.load_pose:
+                    t = [np.linalg.norm(pose[3:]) for pose in sample['poses_pnp']]
+                    sample['translation_magnitudes'] = np.stack(t, axis=0)
+
+        if self.load_pose and not self.use_pnp:
+           sample['translation_magnitudes'] = self.oxts_reader.get_magnitude_between_pairs(img_path, source_views_paths)
 
         if 'val' in self.split_name or 'test' in self.split_name or self.depth_completion:
             if not self.eval_on_sparse:

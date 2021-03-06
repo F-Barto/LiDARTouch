@@ -25,22 +25,30 @@ class HintedLoss(LossBase):
         self.n = supervised_num_scales
 
 
-    def calc_depth_hints_mask(self, photometric_losses, gt_photometric_losses):
+    def calc_depth_hints_mask(self, photometric_losses, gt_photometric_losses, failure_masks=None):
         depth_hints_masks = []
 
-        len_photo = len(photometric_losses[0]) # the length is the same for all scales, hence just [0]
-        len_gt_photo = len(gt_photometric_losses[0])
+        len_gt_photo = len(gt_photometric_losses[0]) # the length is the same for all scales, hence just [0]
 
         for i in range(self.n):
+
             # concat photo loss from pred depth, automask ans gt LiDAR
-            all_losses = torch.cat(photometric_losses[i] + gt_photometric_losses[i], dim=1)
+            all_losses = torch.cat(gt_photometric_losses[i] + photometric_losses[i], dim=1)
 
             # check which depth in which source view produce lower photo loss: estimated, automasked, or LiDAR
+            if failure_masks is not None:
+                failure_mask = failure_masks[i]
+                # set a slightly less value for gt_photometric_losses mask so that if all poses are failed
+                # gt_photometric index is selected and we have regression loss
+                # emulate <= instead of just <)
+                failure_mask[:,:len_gt_photo,:,:] = failure_mask[:,:len_gt_photo,:,:] * 400
+                failure_mask[:, len_gt_photo:, :, :] = failure_mask[:, len_gt_photo:, :, :] * 500
+                all_losses += failure_mask
             idxs = torch.argmin(all_losses, dim=1, keepdim=True).detach()
 
             # check for valid depth hint in each source view  (photo loss min for depth from LiDAR)
             depth_hint_mask = []
-            for j in range(len_photo, len_photo+len_gt_photo):
+            for j in range(len_gt_photo):
                 depth_hint_mask.append((idxs == j))
 
             # if, in any source view, depth hint reprojection better than estimated depth reprojection keep it
@@ -56,15 +64,16 @@ class HintedLoss(LossBase):
 
         supervised_losses = self.supervised_loss(*args, **kwargs)
 
-        depth_hints_loss = sum([supervised_losses[i].mean() for i in range(self.n)]) / self.n
+        depth_hints_loss = sum([supervised_losses[i] for i in range(self.n)]) / self.n
 
         # Store and return reduced photometric loss
         self.add_metric('depth_hints_loss', depth_hints_loss)
         return depth_hints_loss
 
-    def forward(self, photometric_losses, gt_photometric_losses, inv_depths, gt_depths, K, poses):
+    def forward(self, photometric_losses, gt_photometric_losses, inv_depths, gt_depths, K, poses, failure_masks=None):
 
-        depth_hints_mask = self.calc_depth_hints_mask(photometric_losses, gt_photometric_losses)
+        depth_hints_mask = self.calc_depth_hints_mask(photometric_losses, gt_photometric_losses,
+                                                      failure_masks=failure_masks)
 
         if self.supervised_method == 'reprojected':
             args = (inv_depths, gt_depths, K, poses)

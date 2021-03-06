@@ -1,0 +1,6 @@
+includes:
+  - hinted_loss.yml
+
+losses:
+    velocity:
+      velocity_loss_weight: 1.0
