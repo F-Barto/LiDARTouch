@@ -5,6 +5,8 @@ from torchvision.models import resnet
 
 from networks.predictor.invdepth import InvDepthPredictor
 
+from utils.depth import depth2inv
+
 def init_weights(m):
     if isinstance(m, nn.Conv2d) or isinstance(m, nn.Linear):
         m.weight.data.normal_(0, 1e-3)
@@ -156,14 +158,14 @@ class DepthCompletionNet(nn.Module):
                                     stride=1,
                                     padding=1)
 
-        '''
+
         self.convtf = conv_bn_relu(in_channels=128,
                                    out_channels=1,
                                    kernel_size=1,
                                    stride=1,
                                    bn=False,
                                    relu=False)
-        '''
+
 
         self.predictor = InvDepthPredictor(128)
 
@@ -185,6 +187,8 @@ class DepthCompletionNet(nn.Module):
         elif 'g' in self.modality:
             conv1_img = self.conv1_img(x['g'])
         '''
+
+        lidar_input = depth2inv(lidar_input)
 
         conv1_img = self.conv1_img(image_input)
         conv1_d = self.conv1_d(lidar_input)
@@ -219,14 +223,15 @@ class DepthCompletionNet(nn.Module):
         '''
         y = self.convtf(y)
         
-        if self.training:
-            return 100 * y
-        else:
-            min_distance = 0.9
-            return F.relu(
-                100 * y - min_distance
-            ) + min_distance  # the minimum range of Velodyne is around 3 feet ~= 0.9m
+        max_distance = 120
+        min_distance = 0.9 # the minimum range of Velodyne is around 3 feet ~= 0.9m
+        y = F.relu(100 * y)
+
+        min_disp = 1 / max_distance
+        max_disp = 1 / min_distance
+        disp = 1 / y.clamp(min=1e-4) - min_disp
+        disp = disp / (max_disp - min_disp)
+        return {'inv_depths': disp}
         '''
 
         return self.predictor(y)
-
