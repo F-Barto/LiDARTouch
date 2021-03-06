@@ -92,7 +92,7 @@ def inv_depths_normalize(inv_depths):
         Normalized inverse depth maps
     """
     mean_inv_depths = [inv_depth.mean(2, True).mean(3, True) for inv_depth in inv_depths]
-    return [inv_depth / mean_inv_depth.clamp(min=1e-6)
+    return [inv_depth / mean_inv_depth.clamp(min=1e-4)
             for inv_depth, mean_inv_depth in zip(inv_depths, mean_inv_depths)]
 
 

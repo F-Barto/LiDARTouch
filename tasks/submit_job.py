@@ -9,7 +9,7 @@ if __name__ == '__main__':
     parser.add_argument('--project_config_overrides', '-po', type=str)
     parser.add_argument('--model_config_file', '-mf', type=str, required=True)
     parser.add_argument('--model_config_overrides', '-mo', type=str)
-    parser.add_argument('--wall_time', '-wt', type=int, default=240)
+    parser.add_argument('--wall_time', '-wt', type=int, default=80)
     parser.add_argument('--gpumem', type=int, default=11000)
     parser.add_argument('--gpuhost', type=str, default='')
     parser.add_argument('--gpus', type=int, default=1)

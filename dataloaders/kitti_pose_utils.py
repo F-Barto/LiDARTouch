@@ -319,12 +319,19 @@ class KITTIRawOxts():
         Tinv[:3, :3], Tinv[:3, 3] = R.T, - np.matmul(R.T, t)
         return Tinv
 
-    def get_magnitude_between_pairs(self, target_file_path, source_file_paths):
+    def get_transformations_between_pairs(self, target_file_path, source_file_paths):
         target_pose = self._get_pose(target_file_path)
         source_poses = [self._get_pose(source_file_path) for source_file_path in source_file_paths]
 
         # computes the "relative" transformation between the sources and target poses
         relatives_transformations = [self.invert_pose_numpy(source_pose) @ target_pose for source_pose in source_poses]
+
+        return relatives_transformations
+
+    def get_magnitude_between_pairs(self, target_file_path, source_file_paths):
+
+        relatives_transformations = self.get_transformations_between_pairs(target_file_path, source_file_paths)
+
         magnitudes = [np.linalg.norm(rel_t[:3, 3]) for rel_t in relatives_transformations]
 
-        return magnitudes
+        return np.stack(magnitudes, axis=0)
