@@ -12,7 +12,7 @@ What data to use (train_dataloader, val_dataloader, test_dataloader)
 
 
 import random
-
+import copy
 import torch
 
 from pytorch_lightning import _logger as terminal_logger
@@ -59,8 +59,11 @@ class MultiViewModel(BaseModel):
 
         ################### Losses Definition #####################
 
-        self.multi_view_loss_handler = MultiViewLossHandler(self.hparams.losses)
-        other_losses_handler = LossHandler(self.hparams.losses).parse_all_losses()
+        # handlers use pop operation so copy
+        losses_hparams = copy.deepcopy(self.hparams.losses)
+
+        self.multi_view_loss_handler = MultiViewLossHandler(losses_hparams)
+        other_losses_handler = LossHandler(losses_hparams).parse_all_losses()
 
         self.velocity_loss_handler = None
         if 'velocity' in other_losses_handler:
@@ -220,7 +223,7 @@ class MultiViewModel(BaseModel):
         """
 
         sparse_lidar = batch.get('sparse_projected_lidar', None)
-        output = self.compute_inv_depths(batch['target_view'], sparse_depth=sparse_lidar, 
+        output = self.compute_inv_depths(batch['target_view'], sparse_depth=sparse_lidar,
                                          intrinsics=batch['intrinsics'])
 
         if 'poses_pnp' in batch and not 'translation_magnitudes' in batch:
