@@ -11,15 +11,15 @@ from networks.common.basic_blocks import get_activation
 
 from networks.extractors.extractors_utils import select_image_extractor
 
-from networks.decoders.iterative_multiscale_decoder import MultiscalePredictionDecoder
+from networks.decoders.hr_depth_decoder import HRDepthDecoder
 
 from networks.extractors.lidar.pointnet2 import PointNet2MRGExtractor
-
 from networks.common.fusion.spatial_attention import SpatialAttentionFusion
 
-from utils.camera import Camera
-from utils.multiview_warping_and_projection import project_pc
+from networks.common.fusion.fusion_utils import select_fusion_module
+from networks.predictor.utils import create_multiscale_predictor
 
+from functools import partial
 
 ########################################################################################################################
 
@@ -37,33 +37,75 @@ class SpatialAttention(NetworkBase):
     kwargs : dict
         Extra parameters
     """
+
     def __init__(self, image_extractor_name, image_extractor_hparams, lidar_extractor_hparams,
-                 decoder_hparams, activation, fusion_hparams, **kwargs):
+                 decoder_hparams, activation, sa_fusion_hparams, fusion_name='project_squeeze_fuse',
+                 fusion_hparams=None, **kwargs):
         super().__init__(**kwargs)
 
+        assert fusion_name in ['project_squeeze_fuse']
+
         activation_cls = get_activation(activation)
+        self.activation = activation_cls
+        if fusion_hparams is None:
+            fusion_hparams = {}
 
         # keeping the name `encoder` for image encoder so that we can use pre-trained weights from TRI for monodepth2 and packnet
         self.encoder = select_image_extractor(image_extractor_name, activation=activation_cls,
                                               **image_extractor_hparams)
 
-        self.lidar_encoder = PointNet2MRGExtractor(**lidar_extractor_hparams)
 
-        num_ch_enc = self.encoder.num_ch_enc
-        lidar_ch_enc = self.lidar_encoder.out_chans
+        self.num_ch_enc = self.encoder.num_ch_enc
+        self.lidar_ch_enc = self.num_ch_enc[-1]
 
-        self.fusion = SpatialAttentionFusion(lidar_in_chans=lidar_ch_enc, image_in_chans=num_ch_enc[-1],
-                                             activation_cls=activation_cls, **fusion_hparams)
+        self.decoder = HRDepthDecoder(num_ch_enc=self.num_ch_enc, **decoder_hparams)
 
-        self.decoder = MultiscalePredictionDecoder(num_ch_enc=num_ch_enc, activation=activation_cls,
-                                                   **decoder_hparams)
-        '''
+        if 'head' in lidar_extractor_hparams:
+            lidar_extractor_hparams.pop('head')
+        if 'out_chans' in lidar_extractor_hparams:
+            lidar_extractor_hparams.pop('out_chans')
+        self.lidar_encoder = PointNet2MRGExtractor(self.lidar_ch_enc, head='local+global', **lidar_extractor_hparams)
+
+        self.fusion_name = fusion_name
+        self.fusion_module = select_fusion_module(self.fusion_name)
+
+        # at each resblock fuse with guidance the features of both encoders
+        self.fusions = nn.ModuleDict()
+        for i in range(len(self.num_ch_enc)):
+
+            fusion_module = self.fusion_module()
+            args = []
+            if fusion_module.require_chans:
+                args += [self.lidar_ch_enc, self.num_ch_enc[i]]
+            if fusion_module.require_activation:
+                args.append(activation_cls)
+            fusion_module.setup_module(*args, **fusion_hparams)
+
+            self.fusions[f"{self.fusion_name}_{i}"] = fusion_module
+
+        self.scales = len(self.num_ch_enc) - 1
+
+        self.sa_fusions = nn.ModuleDict()
+        for i in range(self.scales):
+            fusion_module = SpatialAttentionFusion(self.lidar_ch_enc, self.decoder.num_ch_dec[i], activation_cls,
+                                                   **sa_fusion_hparams)
+            self.sa_fusions[f"sa_fusion_{i}"] = fusion_module
+
+        self.predictor = create_multiscale_predictor('inv_depth', self.scales,
+                                                     in_chans=self.decoder.num_ch_dec[:self.scales])
+
+    def init_weights(self):
+        """Initializes network weights."""
+        if self.activation is nn.ReLU:
+            initializer = partial(nn.init.kaiming_normal_, mode='fan_out', nonlinearity='relu')
+        else:# ELU
+            initializer = nn.init.xavier_uniform_
+
         for m in self.modules():
-            if isinstance(m, nn.Linear):
-                nn.init.xavier_uniform(m.weight)
-                nn.init.constant(m.bias, 0.1)
-        '''
-
+            if isinstance(m, nn.Conv2d):
+                initializer(m.weight)
+                if m.bias is not None:
+                    m.bias.data.zero_()
 
     @property
     def require_lidar_input(self):
@@ -81,25 +123,29 @@ class SpatialAttention(NetworkBase):
     def require_intrinsics(self):
         return True
 
+    def forward(self, image_input, pc_input, intrinsics, **kwargs):
+        _, _, H, W = image_input.shape
+        features, pos, batch = pc_input.x, pc_input.pos, pc_input.batch
 
-    def forward(self, image_input, pc_input, intrinsics):
+        image_features = self.encoder(image_input)
+        global_pc_features, local_pc_features = self.lidar_encoder(features, pos, batch)
+        pc_local = local_pc_features, pos, batch
 
-        cam_features = self.encoder(image_input)
-        lidar_features = self.lidar_encoder(pc_input.x, pc_input.pos, pc_input.batch)
+        self.fused_features = []
+        for i in range(len(self.num_ch_enc)):
+            _, _, downsampled_H, downsampled_W = image_features[i].shape
+            scale_factor = downsampled_W / float(W)
 
-        # Generate camera
-        B, _, H, W = image_input.shape
-        _, _, downsampled_H, downsampled_W = cam_features[-1].shape
-        scale_factor = downsampled_W / float(W)
-        cam = Camera(K=intrinsics.float()).scaled(scale_factor).to(image_input.device)
+            fused_feature = self.fusions[f"{self.fusion_name}_{i}"](image_features[i], pc_local, global_pc_features,
+                                                                    intrinsics, scale_factor)
+            self.fused_features.append(fused_feature)
 
-        projected_lidar_features = project_pc(cam, lidar_features, pc_input.pos, pc_input.batch, B,
-                                              downsampled_H, downsampled_W)
+        outputs = self.decoder(self.fused_features)
 
-        fused_features = self.fusion(cam_features[-1], projected_lidar_features)
-        
-        #project lidar feature in image plane
-        outputs = self.decoder(cam_features[:-1] + [fused_features])
+        for i in range(self.scales):
+            _, _, downsampled_H, downsampled_W = outputs[i].shape
+            scale_factor = downsampled_W / float(W)
+            x = self.sa_fusions[f"sa_fusion_{i}"](outputs[i], pc_local, intrinsics, scale_factor)
 
-        return outputs
-
+            self.predictor(x, i, **kwargs)
+        return self.predictor.compile_predictions()

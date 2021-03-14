@@ -117,4 +117,3 @@ class MFMPPointNet(NetworkBase):
         outputs = self.decoder(self.fused_features)
 
         return outputs
-
