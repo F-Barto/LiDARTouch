@@ -16,10 +16,12 @@ network:
         nfeatures: 5
         num_points: 1024
       decoder_hparams:
-        predictor: inv_depth
-        upsample_mode: nearest
+        mobile_encoder: False
       fusion_hparams:
+        reduction: 16
+      sa_fusion_hparams:
         nb_partitions: 16
+        learn_zero_encoding: True
   pose_net:
     name: monodepth2
     options:
