@@ -1,7 +1,8 @@
 kitti_root_dir: /home/clear/fbartocc/data/KITTI_raw
 gt_depth_root_dir: /home/clear/fbartocc/data/KITTI_DEPTH_COMPLETION/
-sparse_depth_root_dir: /home/clear/fbartocc/working_data/KITTI/MC_sparse_projected_lidar/factor_16
+sparse_depth_root_dir: /home/clear/fbartocc/working_data/KITTI/MC_sparse_lidar/factor_16
 data_split_dir: /home/clear/fbartocc/depth_project/Depth/data_splits
+pnp_pickled_data: /home/clear/fbartocc/depth_project/LiDARTouch/notebooks/pnp_data_factor16.pkl
 
 datasets:
     dataset_name: kitti
@@ -13,6 +14,7 @@ datasets:
       split_file_path: ${data_split_dir}/eigen_train_files.txt
       sparse_depth_root_dir: ${sparse_depth_root_dir}
       
+      pnp_pickled_data: ${pnp_pickled_data}
       data_transform_options: # augmentation options
         image_shape: [192, 640] # original is [384, 1280]
         jittering: [0.2, 0.2, 0.2, 0.05]
@@ -23,6 +25,7 @@ datasets:
       split_file_path: ${data_split_dir}/filtered_eigen_val_files.txt
       sparse_depth_root_dir: ${sparse_depth_root_dir}
       gt_depth_root_dir: ${gt_depth_root_dir}
+      pnp_pickled_data: ${pnp_pickled_data}
       data_transform_options: # augmentation options
         image_shape: [192, 640]
 
@@ -32,5 +35,6 @@ datasets:
       split_file_path: ${data_split_dir}/filtered_eigen_test_files.txt
       sparse_depth_root_dir: ${sparse_depth_root_dir}
       gt_depth_root_dir: ${gt_depth_root_dir}
+      pnp_pickled_data: ${pnp_pickled_data}
       data_transform_options: # augmentation options
         image_shape: [192, 640]
