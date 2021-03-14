@@ -183,6 +183,36 @@ def project(camera: Camera, X, frame='w'):
     return torch.stack([Xnorm, Ynorm], dim=-1).view(B, H, W, 2)
 
 
+def packed_to_padded(pc_packed, pc_batch):
+    if not pc_packed.dim() == 2:
+        raise ValueError(f"pc_packed can only be 2-dimensional (nb_points x C) but has shape {pc_packed.shape}.")
+    N, C = pc_packed.shape
+    B = pc_batch.max() + 1 # pc_batch contains the batch idx for correspoing point of pc_packed
+    first_idxs = [pc_batch.new_zeros(1)]
+    for i in range(1, B):
+        mask = (pc_batch == i)
+        cumsum = mask.cumsum(dim=0)
+        first_idx = (cumsum == 1).max(0).indices.unsqueeze(0)
+        first_idxs.append(first_idx)
+    last_idx = torch.Tensor([N]).to(pc_batch.device)
+    first_idxs = torch.cat(first_idxs + [last_idx]) # append nb points as last idx for diff
+    # diff is out[i] = input[i + 1] - input[i]
+    lens = first_idxs[1:] - first_idxs[:-1] # diff between first idxs = number of points by batch
+    lens = lens.long().tolist()
+    max_len = max(lens)
+
+    pc_padded = pc_packed.new_zeros((B, C, max_len), requires_grad=True)
+    padded_mask = pc_packed.new_zeros((B, max_len, C))
+
+    first_idxs = first_idxs.long().tolist()
+    for i, f in enumerate(first_idxs[:-1]):
+        pc_padded[i, :, :lens[i]] = pc_packed[f:f+lens[i],:].T
+        padded_mask[i, :lens[i], :] = 1
+
+    padded_mask = padded_mask > 0
+
+    return pc_padded, padded_mask
+
 def project_pc(camera: Camera, pc_features, pc_pos, pc_batch_idx, B, H, W):
     """
     Projects 3D points onto the image plane
@@ -207,16 +237,19 @@ def project_pc(camera: Camera, pc_features, pc_pos, pc_batch_idx, B, H, W):
     _, C = pc_features.shape
 
     # Project 3D points onto the camera image plane
+    pc_pos, pad_mask = packed_to_padded(pc_pos, pc_batch_idx) # return BxCxpadded_dim from NxC
 
-    uv_map = camera.K[0] @ pc_pos.T # 3xN
-    uv_map = uv_map.T # Nx3
+    uv_map = camera.K.bmm(pc_pos) # 3x(N_total) + pad)
+    uv_map = uv_map.transpose(1, 2)[pad_mask].view(-1, 3) # Nx3
+
+    uv_map[:, 0:2] /= uv_map[:, 2].unsqueeze(1)  # u, v = x/z, y/z
     uv_map[:, :2] = uv_map[:, :2].int().float() # x and y from real to pixel coords
 
     # filter out-of-frame coords
     valid_mask = (uv_map[:, 0] < W) & (uv_map[:, 1] < H)
-    uv_map = uv_map[valid_mask]
+    uv_map = uv_map[valid_mask] # N x 3
 
-    X = uv_map[:, 0]  # N
+    X = uv_map[:, 0]
     Y = uv_map[:, 1]
     Z = uv_map[:, 2]
 
@@ -237,7 +270,7 @@ def project_pc(camera: Camera, pc_features, pc_pos, pc_batch_idx, B, H, W):
     uv = pc_pos.new_zeros(B, C, H, W)  # same device and type as pc_pos
     uv[filtered_batch_idx, :, filtered_uv_map[:, 1], filtered_uv_map[:, 0]] = filtered_features
 
-    return uv
+    return uv, filtered_uv_map, filtered_batch_idx
 
 def reconstruct(camera: Camera, depth, frame='w'):
         """
