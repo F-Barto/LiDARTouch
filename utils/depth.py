@@ -92,7 +92,7 @@ def inv_depths_normalize(inv_depths):
         Normalized inverse depth maps
     """
     mean_inv_depths = [inv_depth.mean(2, True).mean(3, True) for inv_depth in inv_depths]
-    return [inv_depth / mean_inv_depth.clamp(min=1e-4)
+    return [inv_depth / mean_inv_depth.clamp(min=1e-6)
             for inv_depth, mean_inv_depth in zip(inv_depths, mean_inv_depths)]
 
 
@@ -179,7 +179,7 @@ def compute_depth_metrics(gt, pred, crop='garg', min_depth=1e-3, max_depth=80.0,
     batch_size, _, gt_height, gt_width = gt.shape
     abs_diff = abs_rel = sq_rel = rmse = rmse_log = a1 = a2 = a3 = 0.0
     # Interpolate predicted depth to ground-truth resolution
-    pred = interpolate_image(pred, gt.shape, mode='bilinear')
+    pred = interpolate_image(pred, gt.shape, mode='bilinear', align_corners=True)
     # If using crop
     if crop == 'garg':
         crop_mask = torch.zeros(gt.shape[-2:]).byte().type_as(gt)

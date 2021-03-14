@@ -88,14 +88,18 @@ def get_pose_pnp(rgb_curr, rgb_near, depth_curr, K):
             pts3d_curr.append(xyz_curr)
             pts2d_near_filtered.append(pts2d_near[i])
 
-    if len(pts3d_curr) >= 4 and len(pts2d_near_filtered) >= 4:
+    pts3d_curr = np.expand_dims(np.array(pts3d_curr).astype(np.float32), axis=1)
+    pts2d_near_filtered = np.expand_dims(np.array(pts2d_near_filtered).astype(np.float32), axis=1)
+
+    same_length = pts3d_curr.shape[0] == pts2d_near_filtered.shape[0]
+    # the minimal number of points accepted by solvePnP is 4:
+    required_count = pts3d_curr.shape[0] >= 4
+
+    if same_length and required_count:
 
         flag = cv2.SOLVEPNP_EPNP
-        if len(pts3d_curr) == 4 and len(pts2d_near_filtered) == 4:
+        if pts3d_curr.shape[0] == 4:
             flag = cv2.SOLVEPNP_P3P
-
-        pts3d_curr = np.expand_dims(np.array(pts3d_curr).astype(np.float32), axis=1)
-        pts2d_near_filtered = np.expand_dims(np.array(pts2d_near_filtered).astype(np.float32), axis=1)
 
         # https://docs.opencv.org/3.4/d9/d0c/group__calib3d.html
         # The default method used to estimate the camera pose for the Minimal Sample Sets step is SOLVEPNP_EPNP.
@@ -106,6 +110,8 @@ def get_pose_pnp(rgb_curr, rgb_near, depth_curr, K):
                                  pts2d_near_filtered,
                                  K[:3,:3],
                                  distCoeffs=None,
+                                 iterationsCount=100,
+                                 reprojectionError=2.0,
                                  flags=flag)
         success = ret[0]
         rotation_vector = ret[1]

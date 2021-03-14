@@ -17,7 +17,7 @@ class HintedLoss(LossBase):
             self.supervised_loss = _supervised_loss.calculate_reprojected_losses
         else:
             _supervised_loss = SupervisedLoss(supervised_method=supervised_method,
-                                                   supervised_num_scales=supervised_num_scales)
+                                              supervised_num_scales=supervised_num_scales)
             self.supervised_loss = _supervised_loss.calculate_losses
 
         self.supervised_method = supervised_method

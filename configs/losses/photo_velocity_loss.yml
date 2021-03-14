@@ -3,4 +3,4 @@ includes:
 
 losses:
     velocity:
-      velocity_loss_weight: 1.0
+      velocity_loss_weight: 0.05

@@ -67,7 +67,7 @@ def ConvBN(in_planes, out_planes, kernel_size, stride, pad, dilation):
 class PaddedConv3x3Block(nn.Module):
     """Layer to perform a convolution followed by activation function
     """
-    def __init__(self, in_channels, out_channels, activation):
+    def __init__(self, in_channels, out_channels, activation=nn.ELU):
         super(PaddedConv3x3Block, self).__init__()
 
         self.conv = PaddedConv3x3(in_channels, out_channels)

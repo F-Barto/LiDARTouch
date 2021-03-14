@@ -148,11 +148,7 @@ class MultiViewModel(BaseModel):
             raise NotImplementedError
 
         # Handle outputs
-
-        keys = ['inv_depths', 'disp', 'coarse_disp', 'cam_disp', 'lidar_disp']
-
-        if 'uncertainties' in output:
-            keys.append('uncertainties')
+        keys = ['inv_depths', 'disp', 'coarse_disp', 'cam_disp', 'lidar_disp', 'uncertainties']
 
         for key in keys:
             if key not in output:
