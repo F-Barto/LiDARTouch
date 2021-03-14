@@ -2,7 +2,7 @@ kitti_root_dir: /home/clear/fbartocc/data/KITTI_raw
 gt_depth_root_dir: /home/clear/fbartocc/data/KITTI_DEPTH_COMPLETION/
 sparse_depth_root_dir: /home/clear/fbartocc/working_data/KITTI/MC_sparse_projected_lidar/factor_16
 data_split_dir: /home/clear/fbartocc/depth_project/Depth/data_splits
-pnp_pickled_data: /home/clear/fbartocc/depth_project/LiDARTouch/notebooks/pnp_data.pkl
+pnp_pickled_data: /home/clear/fbartocc/depth_project/LiDARTouch/notebooks/pnp_data_factor16.pkl
 
 datasets:
     dataset_name: kitti

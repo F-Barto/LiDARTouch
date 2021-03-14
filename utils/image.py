@@ -69,7 +69,7 @@ def gradient_y(image):
     return image[:, :, :-1, :] - image[:, :, 1:, :]
 
 
-def interpolate_image(image, shape, mode='nearest'):
+def interpolate_image(image, shape, mode='bilinear', align_corners=True):
     """
     Interpolate an image to a different resolution
     Parameters
@@ -95,9 +95,9 @@ def interpolate_image(image, shape, mode='nearest'):
         return image
     else:
         # Interpolate image to match the shape
-        return F.interpolate(image, size=shape, mode=mode)
+        return F.interpolate(image, size=shape, mode=mode, align_corners=align_corners)
 
-def interpolate_scales(images, shape=None, mode='nearest'):
+def interpolate_scales(images, shape=None, mode='nearest', align_corners=None):
     """
     Interpolate list of images to the same shape
     Parameters
@@ -110,6 +110,7 @@ def interpolate_scales(images, shape=None, mode='nearest'):
         Interpolation mode
         read more at https://pytorch.org/docs/stable/nn.functional.html#torch.nn.functional.interpolate
     align_corners : bool, optional
+        This only has effect when mode is 'linear', 'bilinear', or 'trilinear'
         True if corners will be aligned after interpolation
         read more at https://pytorch.org/docs/stable/nn.functional.html#torch.nn.functional.interpolate
     Returns
@@ -127,9 +128,9 @@ def interpolate_scales(images, shape=None, mode='nearest'):
     if len(shape) > 2:
         shape = shape[-2:]
 
-    return [F.interpolate(image, shape, mode=mode, align_corners=None) for image in images]
+    return [F.interpolate(image, shape, mode=mode, align_corners=align_corners) for image in images]
 
-def match_scales(image, targets, num_scales, mode='nearest'):
+def match_scales(image, targets, num_scales, mode='bilinear', align_corners=True):
     """
     Interpolate one image to produce a list of images with the same shape as targets
     Parameters
@@ -159,7 +160,6 @@ def match_scales(image, targets, num_scales, mode='nearest'):
             images.append(image)
         else:
             # Otherwise, interpolate
-            images.append(interpolate_image(
-                image, target_shape, mode=mode))
+            images.append(interpolate_image(image, target_shape, mode=mode, align_corners=align_corners))
     # Return scaled images
     return images

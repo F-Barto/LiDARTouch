@@ -131,8 +131,7 @@ def view_synthesis(ref_image, depth, ref_cam: Camera, cam: Camera,
     # Project world points onto reference camera
     ref_coords = project(ref_cam, world_points, frame='w')
     # View-synthesis given the projected reference points
-    return F.grid_sample(ref_image, ref_coords, mode=mode,
-                             padding_mode=padding_mode)#, align_corners=True)
+    return F.grid_sample(ref_image, ref_coords, mode=mode, padding_mode=padding_mode, align_corners=True)
 
 
 
