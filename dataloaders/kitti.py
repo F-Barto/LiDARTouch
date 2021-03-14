@@ -58,7 +58,7 @@ class SequentialKittiLoader(Dataset):
     def __init__(self, kitti_root_dir, split_file_path, gt_depth_root_dir=None, sparse_depth_root_dir=None,
                  data_transform=None, data_transform_options=None, source_views_indexes=None, random_source=0,
                  load_pose=False, eval_on_sparse=False, depth_completion=False, input_channels=3, use_pnp=False,
-                 sparse_pc_root_dir=None, pnp_pickled_data=None):
+                 load_pc=False, pnp_pickled_data=None,
 
         """
         Parameters
@@ -98,8 +98,8 @@ class SequentialKittiLoader(Dataset):
 
         self.split_name = Path(split_file_path).stem  # used in __getitem__
 
+        self.load_pc = load_pc
         self.use_pnp = use_pnp
-        self.sparse_pc_root_dir = sparse_pc_root_dir
         if self.use_pnp:
             assert sparse_depth_root_dir is not None, 'need depth input to compute PnP'
             terminal_logger.info('Loading pose with PnP')
@@ -504,24 +504,20 @@ class SequentialKittiLoader(Dataset):
         sequence_idx = Path(img_path).parents[2].name[17:21]  # 0048
         frame_idx = Path(img_path).stem
         sample['filename'] = f"{capture_date}_{sequence_idx}_{frame_idx}"
-        
+
+        # assumes the depth files are stored in the same format as KITTI_raw:
+        # depth_root_dir/2011_09_26/2011_09_26_drive_0048_sync/proj_depth/velodyne/image_02/0000000085.npz
+        depth_path = Path(self.sparse_depth_root_dir) / capture_date \
+                     / f"{capture_date}_drive_{sequence_idx}_sync" / PROJECTED_VELODYNE_DIR / camera_name \
+                     / f"{frame_idx}.npz"
         
         if self.load_sparse_depth:
-            # assumes the depth files are stored in the same format as KITTI_raw:
-            # depth_root_dir/2011_09_26/2011_09_26_drive_0048_sync/proj_depth/velodyne/image_02/0000000085.npz
-            depth_path = Path(self.sparse_depth_root_dir) / capture_date \
-                         / f"{capture_date}_drive_{sequence_idx}_sync" / PROJECTED_VELODYNE_DIR / camera_name \
-                         / f"{frame_idx}.npz"
-
             depth = self.read_npz_depth(str(depth_path))
             sample['sparse_projected_lidar'] =  depth
 
-        if self.sparse_pc_root_dir is not None:
-            pc_path = Path(self.sparse_pc_root_dir) / capture_date \
-                         / f"{capture_date}_drive_{sequence_idx}_sync" / PROJECTED_VELODYNE_DIR / camera_name \
-                         / f"{frame_idx}.npz"
+        if self.load_pc:
 
-            pc_data = self.read_npz_pc(str(pc_path))
+            pc_data = self.read_npz_pc(str(depth_path))
             pos = pc_data[:,:3]
             features = np.stack([pc_data[:,2],pc_data[:,3]], axis=1)
             num_nodes = pc_data.shape[0]
