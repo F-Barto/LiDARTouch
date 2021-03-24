@@ -68,7 +68,7 @@ class MultiViewLossHandler(LossHandler, LossBase):
             Warped reference image (reconstructing the original one)
         """
         B, _, H, W = ref_image.shape
-        device = ref_image.get_device()
+        device = ref_image.device
 
         # Generate cameras
         _, _, DH, DW = depth.shape
@@ -237,7 +237,7 @@ class MultiViewLossHandler(LossHandler, LossBase):
         mask = None
         if self.masked:
             assert gt_depth is not None, "Ground Truth depth is required as input to mask photo loss on LiDAR points"
-            mask = (gt_depth > 0).detach()
+            mask = (gt_depth <= 0.).detach() # only compute photo loss where there is no LiDAR
         photo_loss = self.reduce_loss(photometric_losses, 'photometric_loss', mask=mask, failure_masks=failure_masks)
 
         # make a list as in-place sum is not auto-grad friendly
