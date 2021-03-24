@@ -3,7 +3,7 @@ input_channels: 3
 network:
   tri_checkpoint_path: ???
   depth_net:
-    name: spatial_attention
+    name: attention_bottleneck
     options:
       activation: elu
       image_extractor_name: DRN_C
@@ -11,16 +11,17 @@ network:
         version: 18        # choices=[18, 34, 50, 101, 152]
         input_channels: ${input_channels}
         zero_init_residual: False
-      lidar_extractor_hparams:
-        out_chans: 512
-        nfeatures: 5
-        num_points: 1024
       decoder_hparams:
         predictor: inv_depth
         upsample_mode: nearest
-        scales: 3
-      fusion_hparams:
-        nb_partitions: 16
+        offsets: 1
+        end_skip: False
+      transformer_hparams:
+        drop: 0.
+        attn_drop: 0.
+        sr_ratio: 2         # [8, 4, 2, 1]
+        num_heads: 4      # [1, 2, 5, 8]
+        mlp_ratio: 4        # [8, 8, 4, 4]
   pose_net:
     name: monodepth2
     options:

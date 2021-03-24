@@ -55,7 +55,7 @@ class FeatRescaling(NetworkBase):
         if 'scales' not in decoder_hparams:
             decoder_hparams['scales'] = len(self.num_ch_enc)-1
 
-        self.decoder = MultiscalePredictionDecoder(num_ch_enc=self.num_ch_enc, activation=activation_cls,
+        self.decoder = MultiscalePredictionDecoder(chans_enc=self.num_ch_enc, activation=activation_cls,
                                                    **decoder_hparams)
         '''
         for m in self.modules():

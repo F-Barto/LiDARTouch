@@ -14,6 +14,10 @@ from networks.nets.depth_nets.feature_rescaling import FeatRescaling
 from networks.nets.depth_nets.disparity_rescaling import DispRescaling
 from networks.nets.depth_nets.spatial_attention import SpatialAttention
 from networks.nets.depth_nets.mfmp_pointnet import MFMPPointNet
+from networks.nets.depth_nets.pvt_depthnet import PVTDepthNet
+from networks.nets.depth_nets.drn_transformer import DRNTransformer
+from networks.nets.depth_nets.infused_pvt import InfusedPVTDepthNet
+from networks.nets.depth_nets.attention_bottleneck import DepthNetAttentionBottleneck
 
 from networks.nets.pose_nets.monodepth2 import PoseResNet
 
@@ -37,6 +41,10 @@ def select_depth_net(depth_net_name, depth_net_options, load_sparse_depth=False)
         'disparity_rescaling': DispRescaling,
         'spatial_attention': SpatialAttention,
         'MFMP_PointNet': MFMPPointNet,
+        'pvt': PVTDepthNet,
+        'drn_transformer': DRNTransformer,
+        'infused_pvt': InfusedPVTDepthNet,
+        'attention_bottleneck': DepthNetAttentionBottleneck
     }
 
     if depth_net_name not in depth_nets:

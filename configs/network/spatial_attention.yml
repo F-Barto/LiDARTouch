@@ -19,6 +19,7 @@ network:
         mobile_encoder: False
       fusion_hparams:
         reduction: 16
+        learn_zero_encoding: True
       sa_fusion_hparams:
         nb_partitions: 16
         learn_zero_encoding: True

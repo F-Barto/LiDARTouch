@@ -1,0 +1,26 @@
+input_channels: 3
+
+network:
+  tri_checkpoint_path: ???
+  depth_net:
+    name: pvt
+    options:
+      activation: elu
+      encoder_name: pvt_tiny
+      encoder_options:
+        in_chans: ${input_channels}
+        drop_rate: 0.
+        attn_drop_rate: 0.
+        img_size: [384, 1280]
+      decoder_options:
+        scales: 4
+        predictor: inv_depth
+        upsample_mode: nearest
+        offsets: 2
+        end_skip: True
+  pose_net:
+    name: monodepth2
+    options:
+      version: 18
+      activation: elu
+      input_channels: ${input_channels}

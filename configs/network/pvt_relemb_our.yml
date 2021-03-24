@@ -1,0 +1,31 @@
+input_channels: 3
+
+network:
+  tri_checkpoint_path: ???
+  depth_net:
+    name: pvt
+    options:
+      activation: elu
+      encoder_name: pvt_relemb
+      encoder_options:
+        in_chans: ${input_channels}
+        drop_rate: 0.
+        attn_drop_rate: 0.
+        patch_size: 2
+        depths: [1, 2, 2, 2]
+        embed_dims: [4, 64, 128, 500] # [64, 128, 320, 512]
+        sr_ratios: [64, 8, 4, 2]         # [8, 4, 2, 1]
+        num_heads: [1, 1, 2, 5]      # [1, 2, 5, 8]
+        mlp_ratios: [8, 8, 8, 4]        # [8, 8, 4, 4]
+      decoder_options:
+        scales: 4
+        predictor: inv_depth
+        upsample_mode: nearest
+        offsets: 1
+        end_skip: True
+  pose_net:
+    name: monodepth2
+    options:
+      version: 18
+      activation: elu
+      input_channels: ${input_channels}

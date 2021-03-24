@@ -1,0 +1,33 @@
+input_channels: 3
+
+network:
+  tri_checkpoint_path: ???
+  depth_net:
+    name: infused_pvt
+    options:
+      activation: elu
+      pvt_hparams:
+        in_chans: ${input_channels}
+        drop_rate: 0.
+        attn_drop_rate: 0.
+        depths: [2, 2, 2]
+        embed_dims: [32, 64, 128, 540] # [64, 128, 320, 512]
+        sr_ratios: [8, 4, 2]         # [8, 4, 2, 1]
+        num_heads: [1, 2, 6]      # [1, 2, 5, 8]
+        mlp_ratios: [8, 8, 4]        # [8, 8, 4, 4]
+        learn_zero_encoding: True
+      lidar_extractor_hparams:
+        nfeatures: 5
+        num_points: 1024
+      decoder_hparams:
+        scales: 4
+        predictor: inv_depth
+        upsample_mode: nearest
+        offsets: 1
+        end_skip: False
+  pose_net:
+    name: monodepth2
+    options:
+      version: 18
+      activation: elu
+      input_channels: ${input_channels}

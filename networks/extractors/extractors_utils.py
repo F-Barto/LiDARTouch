@@ -1,6 +1,9 @@
 from networks.extractors.image.resnet import ResNetExtractor
 from networks.extractors.image.dilated_resnet_C import DRN_C
 from networks.common.resnet_base import build_model
+from networks.extractors.image.pvt import pvt_tiny
+from networks.extractors.image.pvt_relemb import pvt_tiny as pvt_relemb_tiny
+from networks.extractors.image.pvt_relemb import pvt as pvt_relemb
 
 from functools import partial
 
@@ -12,7 +15,10 @@ def select_image_extractor(extractor_name, **kwargs):
 
     image_extractors = {
         'resnet': partial(build_model, ResNetExtractor),
-        'DRN_C': partial(build_model, DRN_C)
+        'DRN_C': partial(build_model, DRN_C),
+        'pvt_tiny': pvt_tiny,
+        'pvt_relemb_tiny': pvt_relemb_tiny,
+        'pvt_relemb': pvt_relemb
     }
 
     if extractor_name not in image_extractors: raise NotImplementedError(f'Invalid image extractor: {extractor_name}')
