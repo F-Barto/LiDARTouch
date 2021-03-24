@@ -85,6 +85,8 @@ class MultiViewModel(BaseModel):
         metrics = {}
 
         failure_checks = batch.get('failure_checks', None)
+        if failure_checks is not None:
+            failure_checks = failure_checks.float()
 
         mv_outputs = self.multi_view_loss_handler(
             batch['target_view_original'],
