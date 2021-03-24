@@ -18,7 +18,7 @@ class DRN_C(ResNetBase):
 
         self.activation = activation(inplace=True)
 
-        self.num_ch_enc = np.array([32, 64, 128, 512])
+        self.num_ch_enc = np.array([32, 64, 512])
         self.inplanes = 16
 
         ############### first conv ###############
@@ -71,9 +71,9 @@ class DRN_C(ResNetBase):
         self.features = []
         self.features.append(self.layer0(x))
         self.features.append(self.layer1(self.features[-1]))
-        self.features.append(self.layer2(self.features[-1]))
 
-        x = self.layer3(self.features[-1])
+        x = self.layer2(self.features[-1])
+        x = self.layer3(x)
         x = self.layer4(x)
         x = self.layer5(x)
         self.features.append(self.layer6(x))

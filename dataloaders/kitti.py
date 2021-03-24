@@ -195,7 +195,7 @@ class SequentialKittiLoader(Dataset):
         """
         relative_paths = Path(split_file_path).read_text().rsplit()
 
-        img_paths = [self.kitti_root_dir / relative_path for relative_path in relative_paths]
+        img_paths = sorted([self.kitti_root_dir / relative_path for relative_path in relative_paths])
 
         terminal_logger.info(f'{len(img_paths)} listed files in the split file {self.split_name}.')
 
@@ -528,14 +528,14 @@ class SequentialKittiLoader(Dataset):
 
         if self.use_pnp:
             if self.pnp_pickled_data is not None:
-                pose_vecs, successes, translation_magnitudes = self.pnp_pickled_data[idx]
+                pose_vecs, failure_checks, translation_magnitudes = self.pnp_pickled_data[idx]
                 if self.random_source > 0:
                     pose_vecs = pose_vecs[sample_idxs]
-                    successes = successes[sample_idxs]
+                    failure_checks = failure_checks[sample_idxs]
                     translation_magnitudes = translation_magnitudes[sample_idxs]
 
                 sample['poses_pnp'] = pose_vecs
-                sample['failure_checks'] = successes
+                sample['failure_checks'] = failure_checks
                 if self.load_pose:
                     sample['translation_magnitudes'] = translation_magnitudes
             else:
