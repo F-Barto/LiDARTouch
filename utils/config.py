@@ -142,6 +142,9 @@ def load_yaml(yaml_filepath, config_root, ignore_default=False, overrides=None):
     if overrides == ['None']:
         overrides=None
 
+    if overrides is not None and len(overrides) > 0:
+        overrides = [None if o == 'None' else o for o in overrides]
+
     # Convert to absolute path for loading includes
     yaml_filepath = Path(yaml_filepath)
 

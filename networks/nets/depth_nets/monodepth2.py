@@ -26,7 +26,7 @@ class DepthNetMonodepth2(NetworkBase):
         activation_cls = get_activation(activation)
         self.encoder = build_model(ResNetExtractor, activation_cls, **encoder_options)
 
-        self.decoder = MultiscalePredictionDecoder(num_ch_enc=self.encoder.num_ch_enc, activation=activation_cls,
+        self.decoder = MultiscalePredictionDecoder(chans_enc=self.encoder.num_ch_enc, activation=activation_cls,
                                                    **decoder_options)
 
     @property

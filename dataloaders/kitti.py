@@ -20,7 +20,7 @@ In this module, the docstring follows the NumPy/SciPy formatting rules.
 import numpy as np
 from PIL import Image
 from pathlib import Path
-from random import sample as rand_sample_list
+import random
 import pickle
 
 from torch.utils.data import Dataset
@@ -57,7 +57,7 @@ class SequentialKittiLoader(Dataset):
     def __init__(self, kitti_root_dir, split_file_path, gt_depth_root_dir=None, sparse_depth_root_dir=None,
                  data_transform=None, data_transform_options=None, source_views_indexes=None, random_source=0,
                  load_pose=False, eval_on_sparse=False, depth_completion=False, input_channels=3, use_pnp=False,
-                 pnp_pickled_data=None):
+                 pnp_pickled_data=None, load_failure_checks=True):
 
         """
         Parameters
@@ -97,13 +97,14 @@ class SequentialKittiLoader(Dataset):
 
         self.split_name = Path(split_file_path).stem  # used in __getitem__
 
+        self.load_failure_checks = load_failure_checks
         self.use_pnp = use_pnp
         if self.use_pnp:
             assert sparse_depth_root_dir is not None, 'need depth input to compute PnP'
             terminal_logger.info('Loading pose with PnP')
 
             self.pnp_pickled_data = None
-            if pnp_pickled_data is not None:
+            if pnp_pickled_data is not None and pnp_pickled_data != 'None':
                 terminal_logger.info(f'Loading PnP pose data from {pnp_pickled_data}')
                 with open(pnp_pickled_data, 'rb') as f:
                     self.pnp_pickled_data = pickle.load(f)
@@ -192,7 +193,7 @@ class SequentialKittiLoader(Dataset):
         """
         relative_paths = Path(split_file_path).read_text().rsplit()
 
-        img_paths = [self.kitti_root_dir / relative_path for relative_path in relative_paths]
+        img_paths = sorted([self.kitti_root_dir / relative_path for relative_path in relative_paths])
 
         terminal_logger.info(f'{len(img_paths)} listed files in the split file {self.split_name}.')
 
@@ -477,7 +478,8 @@ class SequentialKittiLoader(Dataset):
         sample = {'target_view': img, 'idx': idx}
 
         if self.random_source > 0:
-            source_views_paths = rand_sample_list(source_views_paths,self.random_source)
+            sample_idxs = random.sample(range(len(source_views_paths)), self.random_source)
+            source_views_paths = [source_views_paths[i] for i in sample_idxs]
 
         if self.source_views_requested:
             source_views_imgs = [Image.open(path) for path in source_views_paths]
@@ -507,11 +509,15 @@ class SequentialKittiLoader(Dataset):
             sample['sparse_projected_lidar'] =  depth
 
         if self.use_pnp:
-
             if self.pnp_pickled_data is not None:
-                _, pose_vecs, successes, translation_magnitudes = self.pnp_pickled_data[idx]
+                pose_vecs, failure_checks, translation_magnitudes = self.pnp_pickled_data[idx]
+                if self.random_source > 0:
+                    pose_vecs = pose_vecs[sample_idxs]
+                    failure_checks = failure_checks[sample_idxs]
+                    translation_magnitudes = translation_magnitudes[sample_idxs]
+
                 sample['poses_pnp'] = pose_vecs
-                sample['failure_checks'] = successes
+                sample['failure_checks'] = failure_checks
                 if self.load_pose:
                     sample['translation_magnitudes'] = translation_magnitudes
             else:
@@ -558,6 +564,9 @@ class SequentialKittiLoader(Dataset):
             
             else:
                 sample['projected_lidar'] = sample['sparse_projected_lidar']
+
+        if not self.load_failure_checks:
+            sample.pop('failure_checks', None)
 
         if self.data_transform is not None:
             sample = self.data_transform(sample, **self.data_transform_options)

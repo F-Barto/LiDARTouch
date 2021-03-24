@@ -7,45 +7,62 @@ from networks.predictor.utils import create_multiscale_predictor
 from functools import partial
 
 class MultiscalePredictionDecoder(nn.Module):
-    def __init__(self, num_ch_enc, activation, scales=4, predictor='inv_depth', upsample_mode='nearest',
-                 blur=True, blur_at_end=True):
+    def __init__(self, chans_enc, activation, scales=4, predictor='inv_depth', upsample_mode='nearest',
+                 blur=True, blur_at_end=True, end_skip=True, offsets=1):
         super(MultiscalePredictionDecoder, self).__init__()
 
         self.scales = scales
         self.activation = activation
+        self.offsets = offsets
+        self.end_skip = end_skip
 
         available_upmodes = ['nearest', 'pixelshuffle', 'res-pixelshuffle']
         if upsample_mode not in available_upmodes:
             raise ValueError(f"upsample_mode must be in {available_upmodes} | upsample_mode={upsample_mode}")
         self.upsample_mode = upsample_mode
 
-        self.num_ch_enc = num_ch_enc
+        self.chans_enc = chans_enc
 
-        if self.scales == 4:
-            self.num_ch_dec = np.array([16,32,64,128,256])
-        elif self.scales == 3:
-            self.num_ch_dec = np.array([16, 32, 64, 256])
+        self.nb_stages_enc = len(self.chans_enc)
+        self.nb_stages_dec = self.nb_stages_enc - int(end_skip) + offsets
+        print('nb_stages_dec:', self.nb_stages_dec)
+
+        if self.nb_stages_dec == 5:
+            self.chans_dec = np.array([16, 32, 64, 128, 256])
+        elif self.nb_stages_dec == 4:
+            self.chans_dec = np.array([16, 32, 64, 256])
+        else:
+            raise ValueError(f"encoder too small: {self.chans_enc}"
+                             f" or params to big offsets: {offsets}, end_skip: {end_skip}")
+
+        self.skips = range(offsets, self.nb_stages_enc - int(end_skip) + offsets)
 
         # decoder
         self.convs = nn.ModuleDict()
-        for i in range(self.scales, -1, -1):
-            # upconv_0, pre upsampling
-            num_ch_in = self.num_ch_enc[-1] if i == self.scales else self.num_ch_dec[i + 1]
-            num_ch_out = self.num_ch_dec[i]
-            self.convs[f"upconv_{i}_0"] = PaddedConv3x3Block(num_ch_in, num_ch_out, self.activation)
+        for i in range(self.nb_stages_dec-1, -1, -1): # [4, 3, 2, 1, 0] for  self.nb_stages_dec=5
 
-            if 'pixelshuffle' in self.upsample_mode:
-                do_blur = blur and (i != 0 or blur_at_end)
-                self.convs[f"pixelshuffle_i"] = SubPixelUpsamplingBlock(num_ch_out, upscale_factor=2, blur=do_blur)
+            if end_skip or i < (self.nb_stages_dec-1):
+                # upconv_0, pre upsampling
+                chans_in = self.chans_enc[-1] if i == (self.nb_stages_dec-1) else self.chans_dec[i + 1]
+                chans_out = self.chans_dec[i]
+                self.convs[f"upconv_{i}_0"] = PaddedConv3x3Block(chans_in, chans_out, self.activation)
 
-            # upconv_1, post upsampling
-            num_ch_in = self.num_ch_dec[i]
-            if i > 0:
-                num_ch_in += self.num_ch_enc[i - 1]
-            num_ch_out = self.num_ch_dec[i]
-            self.convs[f"upconv_{i}_1"] = PaddedConv3x3Block(num_ch_in, num_ch_out, self.activation)
+                if 'pixelshuffle' in self.upsample_mode:
+                    do_blur = blur and (i != 0 or blur_at_end)
+                    self.convs[f"pixelshuffle_i"] = SubPixelUpsamplingBlock(chans_out, upscale_factor=2, blur=do_blur)
 
-        self.predictor = create_multiscale_predictor(predictor, self.scales, in_chans=self.num_ch_dec[:self.scales])
+            # upconv_1, post upsampling, post skip or before predictor
+            if not end_skip and i == (self.nb_stages_dec-1):
+                chans_in = 0
+            else:
+                chans_in = self.chans_dec[i]
+
+            if i in self.skips:
+                chans_in += self.chans_enc[i - offsets]
+            chans_out = self.chans_dec[i]
+            self.convs[f"upconv_{i}_1"] = PaddedConv3x3Block(chans_in, chans_out, self.activation)
+
+        self.predictor = create_multiscale_predictor(predictor, self.scales, in_chans=self.chans_dec[:self.scales])
 
         self.init_weights()
 
@@ -67,11 +84,11 @@ class MultiscalePredictionDecoder(nn.Module):
 
         # decoder
         x = input_features[-1]
-        for i in range(self.scales, -1, -1):
+        for i in range(self.nb_stages_dec-1, -1, -1): # [4, 3, 2, 1, 0] for  self.nb_stages_dec=5
 
-            x = self.convs[f"upconv_{i}_0"](x)
+            if self.end_skip or  i < (self.nb_stages_dec-1):
+                x = self.convs[f"upconv_{i}_0"](x)
 
-            if (self.scales == 4) or (self.scales == 3 and i < 3):
                 if self.upsample_mode == 'pixelshuffle':
                     x = self.convs[f"pixelshuffle_i"](x)
                 if self.upsample_mode == 'res-pixelshuffle':
@@ -79,9 +96,9 @@ class MultiscalePredictionDecoder(nn.Module):
                 if self.upsample_mode == 'nearest':
                     x = nearest_upsample(x)
 
-            if i > 0:
-                x = [x, input_features[i - 1]]
-                x = torch.cat(x, 1)
+                if i in self.skips:
+                    x = [x, input_features[i - self.offsets]]
+                    x = torch.cat(x, 1)
 
             x = self.convs[f"upconv_{i}_1"](x)
 
