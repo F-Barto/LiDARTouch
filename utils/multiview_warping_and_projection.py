@@ -236,10 +236,24 @@ def project_pc(camera: Camera, pc_features, pc_pos, pc_batch_idx, B, H, W):
     _, C = pc_features.shape
 
     # Project 3D points onto the camera image plane
-    pc_pos, pad_mask = packed_to_padded(pc_pos, pc_batch_idx) # return BxCxpadded_dim from NxC
 
-    uv_map = camera.K.bmm(pc_pos) # 3x(N_total) + pad)
-    uv_map = uv_map.transpose(1, 2)[pad_mask].view(-1, 3) # Nx3
+    # padded version
+    # pc_pos, pad_mask = packed_to_padded(pc_pos, pc_batch_idx) # return BxCxpadded_dim from NxC
+    # uv_map = camera.K.bmm(pc_pos) # 3x(N_total) + pad)
+    # uv_map = uv_map.transpose(1, 2)[pad_mask].view(-1, 3) # Nx3
+
+    # packed version
+    # with camera.K[pc_batch_idx]
+    # pc_pos is a set if 3D coordinates from B points clouds (1 per batch)
+    # pc_batch_idx indicates for each 3D points its corresponding point cloud
+    # However we have one intrinsics per batch, K is of shape Bx3x3
+    # we can't directly do a batched matrix-matrix multiplication
+    # with camera.K[pc_batch_idx] we replicate the corresponding intrinsic matrix for each 3D point
+    # camera.K[pc_batch_idx] is of shape N_totalx3x3
+    # so we can use torch.bmm() efficiently at the cost of memory
+    # it is equivalent to do: for each point i  camera.K[pc_batch_idx[i]] @ pc_pos[i] (1 point <-> 1 matrix)
+    uv_map = camera.K[pc_batch_idx].bmm(pc_pos.unsqueeze(-1))
+    uv_map = uv_map.squeeze()  # Nx3x1 -> Nx3
 
     uv_map[:, 0:2] /= uv_map[:, 2].unsqueeze(1)  # u, v = x/z, y/z
     uv_map[:, :2] = uv_map[:, :2].int().float() # x and y from real to pixel coords
