@@ -13,7 +13,6 @@ datasets:
       kitti_root_dir: ${kitti_root_dir}
       split_file_path: ${data_split_dir}/eigen_train_files.txt
       sparse_depth_root_dir: ${sparse_depth_root_dir}
-      
       pnp_pickled_data: ${pnp_pickled_data}
       data_transform_options: # augmentation options
         image_shape: [192, 640] # original is [384, 1280]
