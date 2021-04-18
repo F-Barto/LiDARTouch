@@ -187,3 +187,40 @@ class SubPixelUpsamplingBlock(nn.Module):
             x = self.pad(x)
             x = self.blur(x)
         return x
+
+class FSEModule(nn.Module):
+    def __init__(self, high_feature_channel, low_feature_channels, output_channel=None):
+        super().__init__()
+        in_channel = high_feature_channel + low_feature_channels
+        out_channel = high_feature_channel
+        if output_channel is not None:
+            out_channel = output_channel
+        reduction = 16
+        channel = in_channel
+        self.avg_pool = nn.AdaptiveAvgPool2d(1)
+
+        self.fc = nn.Sequential(
+            nn.Linear(channel, channel // reduction, bias=False),
+            nn.ELU(inplace=True),
+            nn.Linear(channel // reduction, channel, bias=False)
+        )
+
+        self.sigmoid = nn.Sigmoid()
+
+        self.conv_se = nn.Conv2d(in_channels=in_channel, out_channels=out_channel, kernel_size=1, stride=1)
+        self.elu = nn.ELU(inplace=True)
+
+    def forward(self, high_features, low_features):
+        features = [nearest_upsample(high_features)]
+        features += low_features
+        features = torch.cat(features, 1)
+
+        b, c, _, _ = features.size()
+        y = self.avg_pool(features).view(b, c)
+        y = self.fc(y).view(b, c, 1, 1)
+
+        y = self.sigmoid(y)
+        features = features * y.expand_as(features)
+
+        return self.elu(self.conv_se(features))
+
