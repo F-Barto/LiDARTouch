@@ -181,7 +181,7 @@ class BaseModel(pl.LightningModule):
                           batch_size=self.hparams.dataloaders.train.batch_size,
                           shuffle=True,
                           pin_memory=True,
-                          num_workers=6,
+                          num_workers=self.hparams.dataloaders.train.num_workers,
                           drop_last=True, # to avoid batch_size=1
                           )
 
@@ -191,7 +191,7 @@ class BaseModel(pl.LightningModule):
                           batch_size=self.hparams.dataloaders.val.batch_size,
                           shuffle=False,
                           pin_memory=True,
-                          num_workers=6,
+                          num_workers=self.hparams.dataloaders.val.num_workers,
                           )
 
     def test_dataloader(self):
@@ -200,5 +200,5 @@ class BaseModel(pl.LightningModule):
                           batch_size=self.hparams.dataloaders.test.batch_size,
                           shuffle=False,
                           pin_memory=False,
-                          num_workers=6,
+                          num_workers=self.hparams.dataloaders.test.num_workers,
                           )
