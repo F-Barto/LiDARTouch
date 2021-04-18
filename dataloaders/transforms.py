@@ -357,8 +357,10 @@ def resize_sample_image_and_intrinsics(sample, shape, image_interpolation=Image.
     # Scale intrinsics
     key = INTRINSICS
     intrinsics = np.copy(sample[key])
-    intrinsics[0] *= out_w / orig_w
-    intrinsics[1] *= out_h / orig_h
+    x_scale = out_w / orig_w
+    y_scale = out_h / orig_h
+    intrinsics[0] *= x_scale
+    intrinsics[1] *= y_scale
     sample[key] = intrinsics
 
     # Scale target image
@@ -619,7 +621,7 @@ def val_transforms(sample, image_shape):
     """
     image_shape = tuple(image_shape)
 
-    sample[TARGET_VIEW] = resize_image(sample[TARGET_VIEW], image_shape)
+    sample = resize_sample_image_and_intrinsics(sample, image_shape)
 
     # Resize sparse depth maps
     if sample.get(SPARSE_DEPTH) is not None:
@@ -646,7 +648,7 @@ def test_transforms(sample, image_shape):
     """
     image_shape = tuple(image_shape)
 
-    sample[TARGET_VIEW] = resize_image(sample[TARGET_VIEW], image_shape)
+    sample = resize_sample_image_and_intrinsics(sample, image_shape)
 
     # Resize sparse depth maps
     if sample.get(SPARSE_DEPTH) is not None:

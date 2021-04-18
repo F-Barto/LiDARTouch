@@ -201,14 +201,14 @@ class FSEModule(nn.Module):
 
         self.fc = nn.Sequential(
             nn.Linear(channel, channel // reduction, bias=False),
-            nn.ReLU(inplace=True),
+            nn.ELU(inplace=True),
             nn.Linear(channel // reduction, channel, bias=False)
         )
 
         self.sigmoid = nn.Sigmoid()
 
         self.conv_se = nn.Conv2d(in_channels=in_channel, out_channels=out_channel, kernel_size=1, stride=1)
-        self.relu = nn.ReLU(inplace=True)
+        self.elu = nn.ELU(inplace=True)
 
     def forward(self, high_features, low_features):
         features = [nearest_upsample(high_features)]
@@ -222,5 +222,5 @@ class FSEModule(nn.Module):
         y = self.sigmoid(y)
         features = features * y.expand_as(features)
 
-        return self.relu(self.conv_se(features))
+        return self.elu(self.conv_se(features))
 

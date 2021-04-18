@@ -94,6 +94,24 @@ class BaseModel(pl.LightningModule):
                 'frequency': 1
             }
 
+        elif self.hparams.scheduler.name == 'WarmedCosineAnnealing':
+            from schedulers.warmed_cosine_annealed import LinearWarmupCosineAnnealingLR
+            step_factor = self.hparams.dataloaders.train.batch_size * self.hparams.trainer.accumulate_grad_batches
+            steps_per_epochs = len(self.train_dataset)  // step_factor
+            max_epochs =  steps_per_epochs * self.hparams.trainer.max_epochs
+
+            warmup_epochs = steps_per_epochs * self.hparams.scheduler.options.warmup_epochs
+            self.hparams.scheduler.options.pop('warmup_epochs', None)
+
+            options = {'max_epochs': max_epochs, 'warmup_epochs': warmup_epochs, **self.hparams.scheduler.options}
+
+            scheduler = {
+                'scheduler': LinearWarmupCosineAnnealingLR(optimizer, **options),
+                'name': 'WarmedCosineAnnealing',
+                'interval': 'step',  # so that scheduler.step() is done at batch-level instead of epoch
+                'frequency': 1
+            }
+
         else:
             scheduler_class = getattr(torch.optim.lr_scheduler, self.hparams.scheduler.name)
             # assumes the schedulers used from torch.optim are epoch-based

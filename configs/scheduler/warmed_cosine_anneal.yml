@@ -1,0 +1,8 @@
+# triggers from schedulers.flat_cos_anneal_scheduler import FlatCosAnnealScheduler
+
+scheduler:
+    name: WarmedCosineAnnealing
+    options:
+      warmup_epochs: 1
+      warmup_start_lr: 0.
+      eta_min: 0.000001

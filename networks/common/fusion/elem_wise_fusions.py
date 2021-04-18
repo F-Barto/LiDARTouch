@@ -35,7 +35,7 @@ class ElemWiseSumFusion(FusionBase):
 
         self.activation = None
         self.equalizer = None
-        if self.lidar_in_chans is not None and self.image_in_chans is not None and activation_cls is not None:
+        if lidar_in_chans is not None and image_in_chans is not None and activation_cls is not None:
             self.setup_module(lidar_in_chans, image_in_chans, activation_cls)
 
     def setup_module(self, lidar_in_chans, image_in_chans, activation_cls):

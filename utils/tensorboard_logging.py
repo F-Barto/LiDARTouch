@@ -182,15 +182,24 @@ def prepare_images_to_log(learning_phase, batch, output, batch_idx, log_images_i
 
     prefix = f"{learning_phase}/{batch['filename'][i]}-batch{batch_idx}"
 
-    img_list = [
-        prep_rgb('target_view', batch, i=i),
-        prep_inv_depth('inv_depth', output, i=i),
-        prep_depth('projected_lidar', batch, i=i)
-    ]
+    img_list = [prep_rgb('target_view', batch, i=i)]
+    titles = ['target_view']
+    cmaps = [None]
 
-    titles = ['target_view', 'inv_depth', 'gt_depth']
+    if 'target_view_pred' in output:
+        img_list.append(prep_rgb('target_view_pred', batch, i=i),)
+        titles.append('target_view_pred')
+        cmaps.append(None)
 
-    cmaps = [None, 'magma', 'magma']
+    if 'inv_depth' in output:
+        img_list.append(prep_inv_depth('inv_depth', output, i=i))
+        titles.append('inv_depth')
+        cmaps.append('magma')
+
+    if 'projected_lidar' in batch:
+        img_list.append(prep_depth('projected_lidar', batch, i=i))
+        titles.append('gt_depth')
+        cmaps.append('magma')
 
     if batch.get('sparse_projected_lidar', None) is not None:
         sparse_projected_lidar = prep_depth('sparse_projected_lidar', batch, i=i)
