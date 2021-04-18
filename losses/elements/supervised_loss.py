@@ -90,6 +90,9 @@ def get_loss_func(supervised_method):
 
 ########################################################################################################################
 
+def weighted_mask_spatial_agg(data, weighted_mask):
+    return (data * weighted_mask).sum(dim=(2,3), keepdim=True)
+
 class SupervisedLoss(LossBase):
     """
     Supervised loss for inverse depth maps.
@@ -135,6 +138,33 @@ class SupervisedLoss(LossBase):
         losses = []
 
         gt_inv_depths = [depth2inv(gt_depths[i]) for i in range(self.n)]
+
+        if 'meannormalized' in self.supervised_method:
+            for i in range(self.n):
+                gt_mask = (gt_depths[i] > 0.).float().detach()
+                nb_nonzero_by_batch = gt_mask.sum(dim=(2, 3), keepdim=True)  # bx1x1x1
+
+                pred_mean = (inv_depths[i] * gt_mask).sum(dim=(2, 3), keepdim=True) / (nb_nonzero_by_batch + 1e-5)# E[x]
+                inv_depths[i] = inv_depths[i] / (pred_mean + 1e-5)
+
+                gt_mean = gt_inv_depths[i].sum(dim=(2, 3), keepdim=True) / (nb_nonzero_by_batch + 1e-5)
+                gt_inv_depths[i] = gt_inv_depths[i] / (gt_mean + 1e-5)
+
+        elif 'standardized' in self.supervised_method:
+            for i in range(self.n):
+                gt_mask = (gt_depths[i] > 0.).float().detach()
+                nb_nonzero_by_batch = gt_mask.sum(dim=(2, 3), keepdim=True)  # bx1x1x1
+                weighting_mask = gt_mask / (nb_nonzero_by_batch + 1e-5)
+
+                pred_mean = weighted_mask_spatial_agg(inv_depths[i], weighting_mask)  # E[x]
+                sqrd_pred_mean = weighted_mask_spatial_agg(inv_depths[i]**2, weighting_mask)  # Var(X) = E[X^2] - E[X]^2
+                pred_var = sqrd_pred_mean - pred_mean**2
+                inv_depths[i] = (inv_depths[i] - pred_mean) / torch.sqrt(pred_var + 1e-5)
+
+                gt_mean = weighted_mask_spatial_agg(gt_inv_depths[i], weighting_mask)
+                sqrd_gt_mean = weighted_mask_spatial_agg(gt_inv_depths[i]**2, weighting_mask)
+                gt_var = sqrd_gt_mean - gt_mean**2
+                gt_inv_depths[i] = (gt_inv_depths[i] - gt_mean) / torch.sqrt(gt_var + 1e-5)
 
         # If using a sparse loss, mask invalid pixels for all scales
         if self.supervised_method.startswith('sparse'):

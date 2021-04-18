@@ -19,25 +19,25 @@ class LiDARResNetExtractor(ResNetBase):
         super().__init__(**kwargs)
 
         self.small = small
-        self.num_ch_enc = np.array([64, 64, 128])
+        self.num_ch_enc = np.array([64, 64, 512])
         self.inv_input_depth = inv_input_depth
 
         if not self.small:
             self.num_ch_enc = np.array([64, 64, 128, 256, 512])
 
-        self.inplanes = 64
+        self.inplanes = self.num_ch_enc[0]
 
         ############### first conv ###############
         self.conv1 = conv7x7(input_channels, self.inplanes, stride=2, bias=False)
         self.activation = activation(inplace=True)
 
         ############### body ###############
-        self.layer1 = self._make_layer(block, 64, layers[0], activation, stride=2)
-        self.layer2 = self._make_layer(block, 128, layers[1], activation, stride=2)
+        self.layer1 = self._make_layer(block, self.num_ch_enc[1], layers[0], activation, stride=2)
+        self.layer2 = self._make_layer(block, self.num_ch_enc[2], layers[1], activation, stride=2)
 
         if not self.small:
-            self.layer3 = self._make_layer(block, 256, layers[2], activation, stride=2)
-            self.layer4 = self._make_layer(block, 512, layers[3], activation, stride=2)
+            self.layer3 = self._make_layer(block, self.num_ch_enc[3], layers[2], activation, stride=2)
+            self.layer4 = self._make_layer(block, self.num_ch_enc[4], layers[3], activation, stride=2)
 
         self.init_weights(zero_init_residual)
 

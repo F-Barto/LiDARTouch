@@ -8,7 +8,7 @@ from functools import partial
 
 class MultiscalePredictionDecoder(nn.Module):
     def __init__(self, chans_enc, activation, scales=4, predictor='inv_depth', upsample_mode='nearest',
-                 blur=True, blur_at_end=True, end_skip=True, offsets=1):
+                 blur=True, blur_at_end=True, end_skip=True, offsets=1, no_skip=False):
         super(MultiscalePredictionDecoder, self).__init__()
 
         self.scales = scales
@@ -36,6 +36,8 @@ class MultiscalePredictionDecoder(nn.Module):
                              f" or params to big offsets: {offsets}, end_skip: {end_skip}")
 
         self.skips = range(offsets, self.nb_stages_enc - int(end_skip) + offsets)
+        if no_skip:
+            self.skips = []
 
         # decoder
         self.convs = nn.ModuleDict()
@@ -49,11 +51,14 @@ class MultiscalePredictionDecoder(nn.Module):
 
                 if 'pixelshuffle' in self.upsample_mode:
                     do_blur = blur and (i != 0 or blur_at_end)
-                    self.convs[f"pixelshuffle_i"] = SubPixelUpsamplingBlock(chans_out, upscale_factor=2, blur=do_blur)
+                    self.convs[f"pixelshuffle_{i}"] = SubPixelUpsamplingBlock(chans_out, upscale_factor=2, blur=do_blur)
 
             # upconv_1, post upsampling, post skip or before predictor
             if not end_skip and i == (self.nb_stages_dec-1):
-                chans_in = 0
+                if no_skip:
+                    chans_in =  self.chans_enc[-1]
+                else:
+                    chans_in =  0
             else:
                 chans_in = self.chans_dec[i]
 
@@ -90,9 +95,9 @@ class MultiscalePredictionDecoder(nn.Module):
                 x = self.convs[f"upconv_{i}_0"](x)
 
                 if self.upsample_mode == 'pixelshuffle':
-                    x = self.convs[f"pixelshuffle_i"](x)
+                    x = self.convs[f"pixelshuffle_{i}"](x)
                 if self.upsample_mode == 'res-pixelshuffle':
-                    x = self.convs[f"pixelshuffle_i"](x) + nearest_upsample(x)
+                    x = self.convs[f"pixelshuffle_{i}"](x) + nearest_upsample(x)
                 if self.upsample_mode == 'nearest':
                     x = nearest_upsample(x)
 

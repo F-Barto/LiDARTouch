@@ -1,14 +1,15 @@
 import torch
+import numpy as np
 
 from losses.elements.supervised_loss import SupervisedLoss, ReprojectedLoss
 from losses.loss_base import LossBase
 
 
-class HintedLoss(LossBase):
-    def __init__(self, supervised_method='reprojected', hinted_loss_weight=1.0, supervised_num_scales=4):
-        super().__init__()
 
-        self.hinted_loss_weight = hinted_loss_weight
+class HintedLoss(LossBase):
+    def __init__(self, supervised_method='reprojected', hinted_loss_weight=1.0, loss_iterations=0,
+                 supervised_num_scales=4):
+        super().__init__()
 
         self.supervised_method = supervised_method
 
@@ -23,6 +24,13 @@ class HintedLoss(LossBase):
         self.supervised_method = supervised_method
 
         self.n = supervised_num_scales
+
+        self.loss_iterations = loss_iterations
+        self.hinted_loss_weight = hinted_loss_weight
+        if loss_iterations>0:
+            self.curr_it = 0
+
+
 
 
     def calc_depth_hints_mask(self, photometric_losses, gt_photometric_losses, failure_masks=None):
@@ -81,6 +89,13 @@ class HintedLoss(LossBase):
             args = (inv_depths, gt_depths)
 
         depth_hints_loss = self.calc_depth_hints_loss(*args, valid_masks=depth_hints_mask)
-        depth_hints_loss = self.hinted_loss_weight * depth_hints_loss
+
+        loss_weight = self.hinted_loss_weight
+        if self.loss_iterations > 0 and self.curr_it <= self.loss_iterations:
+            #loss_weight = (loss_weight / 2) * (1 + np.cos((1 - self.curr_it / self.loss_iterations) * np.pi))
+            loss_weight = np.exp((self.curr_it/self.loss_iterations - 1)*15)
+            self.curr_it += 1
+
+        depth_hints_loss = loss_weight * depth_hints_loss
 
         return depth_hints_loss
