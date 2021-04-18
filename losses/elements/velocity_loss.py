@@ -35,9 +35,10 @@ class VelocityLoss(LossBase):
             if failure_checks is not None:
                 n = failure_checks.sum()
                 translation_magnitudes = translation_magnitudes * failure_checks
+                pred_trans = pred_trans * failure_checks
 
             # Calculate velocity supervision loss
-            loss = (pred_trans - translation_magnitudes).abs().sum() / n
+            loss = (pred_trans - translation_magnitudes).abs().sum() / (n + 1e-6)
 
             self.add_metric('velocity_loss', loss)
             return {
