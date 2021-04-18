@@ -1,8 +1,6 @@
 from networks.common.basic_blocks import get_activation
 
 from networks.nets.net_base import NetworkBase
-from networks.common.resnet_base import build_model
-from networks.extractors.image.resnet import ResNetExtractor
 from networks.decoders.iterative_multiscale_decoder import MultiscalePredictionDecoder
 from networks.common.vision_transformer import TransformerBlock, gen_pos_idxs
 from networks.extractors.extractors_utils import select_image_extractor

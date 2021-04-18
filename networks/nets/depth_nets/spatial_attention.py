@@ -58,7 +58,7 @@ class SpatialAttention(NetworkBase):
         self.num_ch_enc = self.encoder.num_ch_enc
         self.lidar_ch_enc = self.num_ch_enc[-1]
 
-        self.decoder = HRDepthDecoder(num_ch_enc=self.num_ch_enc, **decoder_hparams)
+        self.decoder = HRDepthDecoder(chans_enc=self.num_ch_enc, **decoder_hparams)
 
         if 'head' in lidar_extractor_hparams:
             lidar_extractor_hparams.pop('head')

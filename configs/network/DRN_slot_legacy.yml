@@ -1,0 +1,45 @@
+image_input_channels: 3
+
+network:
+  tri_checkpoint_path: ???
+  depth_net:
+    name: drn_slot
+    options:
+      activation: elu
+      image_extractor_hparams:
+        version: 18        # choices=[18, 34, 50, 101, 152]
+        input_channels: ${image_input_channels}
+        zero_init_residual: False
+      lidar_extractor_hparams:
+        nfeatures: 5
+        num_points: 1024
+      decoder_hparams:
+        predictor: inv_depth
+        upsample_mode: nearest
+        offsets: 1
+        end_skip: False
+      self_attention_hparams:
+        num_heads: 4
+        dim_head: 128
+        mlp_ratio: 4.
+        dropout: 0.
+        sr_ratio: 1
+      fusion_hparams:
+        learn_zero_encoding: False
+        num_slots: 32
+        slot_dim: 128
+        iters: 3
+        mlp_ratio: 4.
+        block_mm_ratio: 4.
+        block_chunks: 8
+        block_rank: 10
+
+
+
+  pose_net:
+    name: monodepth2
+    options:
+      version: 18
+      activation: elu
+      input_channels: ${image_input_channels}
+

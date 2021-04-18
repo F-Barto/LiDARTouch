@@ -18,6 +18,11 @@ from networks.nets.depth_nets.pvt_depthnet import PVTDepthNet
 from networks.nets.depth_nets.drn_transformer import DRNTransformer
 from networks.nets.depth_nets.infused_pvt import InfusedPVTDepthNet
 from networks.nets.depth_nets.attention_bottleneck import DepthNetAttentionBottleneck
+from networks.nets.depth_nets.saf_attention_bottleneck import DepthNetSAFBottleneck
+from networks.nets.depth_nets.mfmp_hr_symmetric import MFMPHRDepthNet
+from networks.nets.depth_nets.drn_slot import DRNSlot
+from networks.nets.depth_nets.drn_early_fusion import DRNEalyFusion
+from networks.nets.depth_nets.mfmp_slot import MFMPSlotDepthNet
 
 from networks.nets.pose_nets.monodepth2 import PoseResNet
 
@@ -44,7 +49,12 @@ def select_depth_net(depth_net_name, depth_net_options, load_sparse_depth=False)
         'pvt': PVTDepthNet,
         'drn_transformer': DRNTransformer,
         'infused_pvt': InfusedPVTDepthNet,
-        'attention_bottleneck': DepthNetAttentionBottleneck
+        'attention_bottleneck': DepthNetAttentionBottleneck,
+        'saf_attention_bottleneck': DepthNetSAFBottleneck,
+        'MFMP_HR_symmetric': MFMPHRDepthNet,
+        'drn_slot': DRNSlot,
+        'drn_early_fusion': DRNEalyFusion,
+        'mfmp_slot': MFMPSlotDepthNet
     }
 
     if depth_net_name not in depth_nets:

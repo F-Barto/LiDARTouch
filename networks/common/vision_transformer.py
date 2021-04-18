@@ -73,24 +73,35 @@ class Attention(nn.Module):
         return x
 
 
+class AddAndNorm(nn.Module):
+    def __init__(self, dim, norm_layer=nn.LayerNorm):
+        super().__init__()
+        self.norm = norm_layer(dim)
+
+    def forward(self, x, out):
+        x = self.norm(x + out)
+        return x
+
 class TransformerBlock(nn.Module):
 
     def __init__(self, dim, num_heads, mlp_ratio=4., qkv_bias=False, qk_scale=None, drop=0., attn_drop=0.,
                  act_layer=nn.GELU, norm_layer=nn.LayerNorm, sr_ratio=1):
         super().__init__()
-        self.norm1 = norm_layer(dim)
+        self.add_norm1 = AddAndNorm(dim, norm_layer)
         self.attn = Attention(
             dim,
             num_heads=num_heads, qkv_bias=qkv_bias, qk_scale=qk_scale,
             attn_drop=attn_drop, proj_drop=drop, sr_ratio=sr_ratio)
 
-        self.norm2 = norm_layer(dim)
+        self.add_norm2 = AddAndNorm(dim, norm_layer)
         mlp_hidden_dim = int(dim * mlp_ratio)
         self.mlp = Mlp(in_features=dim, hidden_features=mlp_hidden_dim, act_layer=act_layer, drop=drop)
 
     def forward(self, x, H, W, x_kv=None):
-        x = x + self.attn(self.norm1(x), H, W, x_kv=x_kv)
-        x = x + self.mlp(self.norm2(x))
+        attn = self.attn(x, H, W, x_kv=x_kv)
+        x = self.add_norm1(x, attn)
+        mlp = self.mlp(x)
+        x = self.add_norm2(x, mlp)
 
         return x
 
