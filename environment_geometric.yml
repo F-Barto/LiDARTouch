@@ -1,13 +1,13 @@
 channels:
   - pytorch
-  - defaults
   - conda-forge
+  - defaults
 dependencies:
   - python>=3.6.3, <3.8 # to avoid 3.6.0 issue https://github.com/pytorch/pytorch/issues/14931
   - pip>=20.0
   - pytorch>=1.7, <1.8
   - torchvision
-  - cudatoolkit>=10.2
+  - cudatoolkit==10.2
   - scikit-learn
   - scikit-image
   - matplotlib
