@@ -495,7 +495,7 @@ class SequentialKittiLoader(Dataset):
 
         sequence_idx = Path(img_path).parents[2].name[17:21]  # 0048
         frame_idx = Path(img_path).stem
-        sample['filename'] = f"{capture_date}_{sequence_idx}_{frame_idx}"
+        sample['filename'] = f"{capture_date}_{sequence_idx}_c{camera_name[-1]}_{frame_idx}"
         
         
         if self.load_sparse_depth:
