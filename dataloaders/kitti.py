@@ -505,7 +505,7 @@ class SequentialKittiLoader(Dataset):
 
         sequence_idx = Path(img_path).parents[2].name[17:21]  # 0048
         frame_idx = Path(img_path).stem
-        sample['filename'] = f"{capture_date}_{sequence_idx}_{frame_idx}"
+        sample['filename'] = f"{capture_date}_{sequence_idx}_c{camera_name[-1]}_{frame_idx}"
 
         # assumes the depth files are stored in the same format as KITTI_raw:
         # depth_root_dir/2011_09_26/2011_09_26_drive_0048_sync/proj_depth/velodyne/image_02/0000000085.npz

@@ -11,6 +11,7 @@ What data to use (train_dataloader, val_dataloader, test_dataloader)
 '''
 
 import torch
+import copy
 
 import pytorch_lightning as pl
 from pytorch_lightning import _logger as terminal_logger
@@ -101,9 +102,11 @@ class BaseModel(pl.LightningModule):
             max_epochs =  steps_per_epochs * self.hparams.trainer.max_epochs
 
             warmup_epochs = steps_per_epochs * self.hparams.scheduler.options.warmup_epochs
-            self.hparams.scheduler.options.pop('warmup_epochs', None)
 
-            options = {'max_epochs': max_epochs, 'warmup_epochs': warmup_epochs, **self.hparams.scheduler.options}
+            scheduler_options = copy.deepcopy(self.hparams.scheduler.options)
+            scheduler_options.pop('warmup_epochs', None)
+
+            options = {'max_epochs': max_epochs, 'warmup_epochs': warmup_epochs, **scheduler_options}
 
             scheduler = {
                 'scheduler': LinearWarmupCosineAnnealingLR(optimizer, **options),
@@ -178,28 +181,43 @@ class BaseModel(pl.LightningModule):
 
     def train_dataloader(self):
         # REQUIRED
+
+        num_workers = self.hparams.dataloaders.train.num_workers
+        if num_workers is None:
+            num_workers = 0
+
         return DataLoader(self.train_dataset,
                           batch_size=self.hparams.dataloaders.train.batch_size,
                           shuffle=True,
                           pin_memory=True,
-                          num_workers=self.hparams.dataloaders.train.num_workers,
+                          num_workers=num_workers,
                           drop_last=True, # to avoid batch_size=1
                           )
 
     def val_dataloader(self):
         # REQUIRED
+
+        num_workers = self.hparams.dataloaders.val.num_workers
+        if num_workers is None:
+            num_workers = 0
+
         return DataLoader(self.val_dataset,
                           batch_size=self.hparams.dataloaders.val.batch_size,
                           shuffle=False,
                           pin_memory=True,
-                          num_workers=self.hparams.dataloaders.val.num_workers,
+                          num_workers=num_workers,
                           )
 
     def test_dataloader(self):
         # REQUIRED
+
+        num_workers = self.hparams.dataloaders.test.num_workers
+        if num_workers is None:
+            num_workers = 0
+
         return DataLoader(self.test_dataset,
                           batch_size=self.hparams.dataloaders.test.batch_size,
                           shuffle=False,
                           pin_memory=False,
-                          num_workers=self.hparams.dataloaders.test.num_workers,
+                          num_workers=num_workers,
                           )
