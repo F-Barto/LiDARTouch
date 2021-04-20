@@ -10,8 +10,7 @@ from networks.nets.net_base import NetworkBase
 
 from networks.common.basic_blocks import get_activation, conv1x1
 
-from networks.common.resnet_base import build_model
-from networks.extractors.image.dilated_resnet_C import DRN_C
+from networks.extractors.extractors_utils import select_image_extractor
 
 from networks.extractors.lidar.pointnet2 import PointNet2MRGExtractor
 
@@ -37,13 +36,14 @@ class DRNSlot(NetworkBase):
     kwargs : dict
         Extra parameters
     """
-    def __init__(self, image_extractor_hparams, lidar_extractor_hparams,
+    def __init__(self, image_extractor_name, image_extractor_hparams, lidar_extractor_hparams,
                  decoder_hparams, activation, self_attention_hparams, fusion_hparams, **kwargs):
         super().__init__(**kwargs)
 
         activation_cls = get_activation(activation)
 
-        self.encoder = build_model(DRN_C, activation=activation_cls, **image_extractor_hparams)
+        self.encoder = select_image_extractor(image_extractor_name, activation=activation_cls,
+                                              **image_extractor_hparams)
 
         chans_enc = self.encoder.num_ch_enc
         last_in_chans = chans_enc[-1]

@@ -6,11 +6,13 @@ network:
     name: drn_slot
     options:
       activation: elu
-      image_extractor_name: DRN_C
+      image_extractor_name: resnet
       image_extractor_hparams:
-        version: 18        # choices=[18, 34, 50, 101, 152]
+        version: 34        # choices=[18, 34, 50, 101, 152]
         input_channels: ${image_input_channels}
         zero_init_residual: False
+        stride: 8
+        num_ch_enc: [64, 64, 64]
       lidar_extractor_hparams:
         nfeatures: 5
         num_points: 1024
@@ -21,15 +23,15 @@ network:
         end_skip: False
       self_attention_hparams:
         num_heads: 4
-        dim_head: 128
+        dim_head: 64
         mlp_ratio: 4.
         dropout: 0.
         sr_ratio: 1
       fusion_hparams:
         learn_zero_encoding: False
-        num_slots: 32
-        slot_dim: 128
-        iters: 3
+        num_slots: 16
+        slot_dim: 64
+        iters: 5
         mlp_ratio: 4.
         lidar_dropout: 0.5
         lidar_attn_mask: True
