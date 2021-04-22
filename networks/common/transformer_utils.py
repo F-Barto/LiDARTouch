@@ -186,7 +186,7 @@ class WeightedAttention(nn.Module):
             # Here we do the masking post-softmax, because the softmax is on slot dim if we set 0 or -inf
             # for the pixel column prior to softmax we will have either a uniform distrib or a nan output
             # so we set 0 to the pixel column post softmax so that the pixel does not influence the Value computation
-            attn = dots * mask
+            attn = attn * mask
 
         mean_attn = attn / (attn.sum(dim=self.weighted_mean_dim, keepdim=True) + self.eps)
 

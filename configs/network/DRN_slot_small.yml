@@ -12,7 +12,7 @@ network:
         input_channels: ${image_input_channels}
         zero_init_residual: False
         stride: 8
-        num_ch_enc: [64, 64, 64]
+        num_ch_enc: [64, 64, 128]
       lidar_extractor_hparams:
         nfeatures: 5
         num_points: 1024
@@ -23,14 +23,14 @@ network:
         end_skip: False
       self_attention_hparams:
         num_heads: 4
-        dim_head: 64
+        dim_head: 128
         mlp_ratio: 4.
-        dropout: 0.
+        dropout: 0.5
         sr_ratio: 1
       fusion_hparams:
         learn_zero_encoding: False
         num_slots: 16
-        slot_dim: 64
+        slot_dim: 128
         iters: 5
         mlp_ratio: 4.
         lidar_dropout: 0.5
