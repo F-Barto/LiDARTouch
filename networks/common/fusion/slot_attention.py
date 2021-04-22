@@ -21,13 +21,14 @@ class SlotAttentionFusion(FusionBase):
             self.setup_module(lidar_in_chans, image_in_chans, **kwargs)
 
     def setup_module(self, lidar_in_chans, image_in_chans, learn_zero_encoding=False,
-                     num_slots=32, slot_dim=128, iters=3, mlp_ratio=4., lidar_dropout=0.5, lidar_attn_mask=True):
+                     num_slots=32, slot_temp=1., slot_dim=128, iters=3, mlp_ratio=4., lidar_dropout=0.5,
+                     lidar_attn_mask=True):
 
         self.lidar_attn_mask = lidar_attn_mask
 
         self.in_mapping = PreNorm(image_in_chans, nn.Linear(image_in_chans, slot_dim))
-        self.slot_image_attention = SlotAttention(num_slots, slot_dim, iters=iters,
-                                                  mlp_ratio=mlp_ratio, return_attn=True)
+        self.slot_image_attention = SlotAttention(num_slots, slot_dim, iters=iters,mlp_ratio=mlp_ratio,
+                                                  return_attn=True, temp=slot_temp)
 
         self.learn_zero_encoding = learn_zero_encoding
         if learn_zero_encoding:
@@ -36,7 +37,8 @@ class SlotAttentionFusion(FusionBase):
                                    learn_zero_encoding=learn_zero_encoding)
         self.lidar_in_mapping = PreNorm(lidar_in_chans, nn.Linear(lidar_in_chans, slot_dim))
 
-        self.slots_lidar_transformer = WeightedTransformer(1, slot_dim, mlp_ratio=mlp_ratio, dropout=lidar_dropout)
+        self.slots_lidar_transformer = WeightedTransformer(1, slot_dim, mlp_ratio=mlp_ratio, dropout=lidar_dropout,
+                                                           temp=slot_temp)
 
         self.inputs_to_slots_attn = PreNorm(slot_dim, WeightedAttention(slot_dim, softmax_dim=2, weighted_mean_dim=1))
         self.attn_ff = PreNorm(slot_dim, FeedForward(slot_dim, int(slot_dim * mlp_ratio)))

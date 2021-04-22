@@ -116,9 +116,9 @@ class Attention(nn.Module):
             log_mask = torch.log(mask.float()) # torch.log(0) = -inf
             dots = dots * mask + log_mask
 
-        attn = dots.softmax(dim=-1)
+        self.attn = dots.softmax(dim=-1)
 
-        out = torch.einsum('b h i j, b h j d -> b h i d', attn, v)  # [B,H,N,M] x [B,H,M,D] -> [B,H,N,D]
+        out = torch.einsum('b h i j, b h j d -> b h i d', self.attn, v)  # [B,H,N,M] x [B,H,M,D] -> [B,H,N,D]
         out = eop.rearrange(out, 'b h n d -> b n (h d)')
         out = self.project_out(out)  # reduce the heads into one head
 
@@ -144,7 +144,7 @@ class Transformer(nn.Module):
 
 
 class WeightedAttention(nn.Module):
-    def __init__(self, dim, eps=1e-8, softmax_dim=1, weighted_mean_dim=2, return_attn=False):
+    def __init__(self, dim, eps=1e-8, softmax_dim=1, weighted_mean_dim=2, return_attn=False, temp=1.):
         super().__init__()
         self.norm_input = nn.LayerNorm(dim)
         self.norm_context = nn.LayerNorm(dim)
@@ -154,11 +154,12 @@ class WeightedAttention(nn.Module):
         self.to_v = nn.Linear(dim, dim)
 
         self.eps = eps
-        self.scale = dim ** -0.5
+        self.scale = (dim ** -0.5) * 1/temp
         self.softmax_dim = softmax_dim
         self.weighted_mean_dim = weighted_mean_dim
 
         self.return_attn = return_attn
+
 
     def forward(self, inputs, context, mask=None):
 
@@ -170,13 +171,13 @@ class WeightedAttention(nn.Module):
         v = self.to_v(context)
 
         dots = torch.einsum('bid,bjd->bij', q, k) * self.scale
-        attn = dots.softmax(dim=self.softmax_dim) + self.eps
+        self.attn = dots.softmax(dim=self.softmax_dim) + self.eps
 
         if mask is not None:
             # mask is a binary mask either bool (True/False) or float (0./1.)
             # assumes mask is True or 1. for elements we want to have attention for and False or 0. otherwise
             mask = eop.rearrange(mask, 'b ... -> b (...)')
-            mask = eop.repeat(mask, 'b m -> b () m') # Bx1xM
+            mask = eop.repeat(mask, 'b m -> b () m')  # Bx1xM
 
             # masking explanation:
             # let N be the number of slots and M the number of pixels
@@ -186,23 +187,24 @@ class WeightedAttention(nn.Module):
             # Here we do the masking post-softmax, because the softmax is on slot dim if we set 0 or -inf
             # for the pixel column prior to softmax we will have either a uniform distrib or a nan output
             # so we set 0 to the pixel column post softmax so that the pixel does not influence the Value computation
-            attn = attn * mask
+            self.attn = self.attn * mask
 
-        mean_attn = attn / (attn.sum(dim=self.weighted_mean_dim, keepdim=True) + self.eps)
+        self.mean_attn = self.attn / (self.attn.sum(dim=self.weighted_mean_dim, keepdim=True) + self.eps)
 
-        updates = torch.einsum('bjd,bij->bid', v, mean_attn)
+        updates = torch.einsum('bjd,bij->bid', v, self.mean_attn)
 
         if self.return_attn:
-            return updates, attn
+            return updates, self.attn
         return updates
 
 class WeightedTransformer(nn.Module):
-    def __init__(self, depth, dim, softmax_dim=1, weighted_mean_dim=2, mlp_ratio=4., dropout=0.):
+    def __init__(self, depth, dim, softmax_dim=1, weighted_mean_dim=2, mlp_ratio=4., dropout=0., temp=1.):
         super().__init__()
         self.layers = nn.ModuleList([])
 
         for d in range(1, depth+1):
-            attention = WeightedAttention(dim, eps=1e-6, softmax_dim=softmax_dim, weighted_mean_dim=weighted_mean_dim)
+            attention = WeightedAttention(dim, eps=1e-6, softmax_dim=softmax_dim,
+                                          weighted_mean_dim=weighted_mean_dim, temp=temp)
             ff = FeedForward(dim, int(dim * mlp_ratio), dropout=dropout)
             self.layers.append(nn.ModuleList([
                 PreNorm(dim, attention),
@@ -283,7 +285,7 @@ class SlotAttentionExperimental(nn.Module):
         return slots, inputs
 
 class SlotAttention(nn.Module):
-    def __init__(self, num_slots, dim, iters=3, eps=1e-8, mlp_ratio=4., return_attn=False):
+    def __init__(self, num_slots, dim, iters=3, eps=1e-8, mlp_ratio=4., return_attn=False, temp=1.):
 
         super().__init__()
         self.num_slots = num_slots
@@ -294,7 +296,8 @@ class SlotAttention(nn.Module):
         self.slots_logsigma = nn.Parameter(torch.zeros(1, 1, dim))
         init.xavier_uniform_(self.slots_logsigma)
 
-        self.slots_to_inputs_attn = GatedResidual(dim, WeightedAttention(dim, eps=eps, return_attn=return_attn))
+        self.slots_to_inputs_attn = GatedResidual(dim, WeightedAttention(dim, eps=eps, return_attn=return_attn,
+                                                                         temp=temp))
         self.ff = PreNorm(dim, FeedForward(dim, int(dim * mlp_ratio)))
 
     def forward(self, inputs, num_slots = None):
