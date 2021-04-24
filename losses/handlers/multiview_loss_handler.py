@@ -145,8 +145,9 @@ class MultiViewLossHandler(LossHandler, LossBase):
                 bool_masks.append(lidar_mask)
 
             if valid_reproj_masks is not None:
-                # False for portion of images invalid across all views, True if a pixel is valid in any views
-                or_valid_reproj_masks = valid_reproj_masks.sum(1).bool()
+                # valid_reproj_masks is False for portion of images invalid across all views
+                # True if a pixel is valid in any views
+                or_valid_reproj_masks = valid_reproj_masks.sum(1, True).bool()
                 bool_masks.append(or_valid_reproj_masks)
                 valid_min_mask = inf_value * (~valid_reproj_masks) # inf value on invalid pixels so they aren't selected
                 min_masks.append(valid_min_mask)
@@ -157,7 +158,7 @@ class MultiViewLossHandler(LossHandler, LossBase):
 
             bool_mask = None
             if len(bool_masks) > 0:
-                bool_mask = torch.cat(min_masks, 1).mul(1).bool() # logical and across valid masks
+                bool_mask = torch.cat(bool_masks, 1).prod(1, True).bool() # logical and across valid masks
 
             if reduce_op == 'min':
                 if len(min_masks) > 0:
