@@ -103,7 +103,7 @@ def image_grid(B, H, W, dtype, device, normalized=False):
 ################################################
 
 def view_synthesis(ref_image, depth, ref_cam: Camera, cam: Camera,
-                   mode='bilinear', padding_mode='zeros'):
+                   mode='bilinear', padding_mode='zeros', return_valid_mask=False):
     """
     Synthesize an image from another plus a depth map.
     Parameters
@@ -129,13 +129,15 @@ def view_synthesis(ref_image, depth, ref_cam: Camera, cam: Camera,
     # Reconstruct world points from target_camera
     world_points = reconstruct(cam, depth, frame='w')
     # Project world points onto reference camera
-    ref_coords = project(ref_cam, world_points, frame='w')
+    ref_coords, valid_mask = project(ref_cam, world_points, frame='w', return_valid_mask=True)
     # View-synthesis given the projected reference points
-    return F.grid_sample(ref_image, ref_coords, mode=mode, padding_mode=padding_mode, align_corners=True)
+    view_synthesized = F.grid_sample(ref_image, ref_coords, mode=mode, padding_mode=padding_mode, align_corners=True)
+
+    return view_synthesized, valid_mask if return_valid_mask else view_synthesized
 
 
 
-def project(camera: Camera, X, frame='w'):
+def project(camera: Camera, X, frame='w', return_valid_mask=False):
     """
     Projects 3D points onto the image plane
 
@@ -167,6 +169,9 @@ def project(camera: Camera, X, frame='w'):
     X = Xc[:, 0]
     Y = Xc[:, 1]
     Z = Xc[:, 2].clamp(min=1e-5)
+
+    valid_mask = ((X < W) & (Y < H)).detach()
+
     Xnorm = 2 * (X / Z) / (W - 1) - 1.
     Ynorm = 2 * (Y / Z) / (H - 1) - 1.
 
@@ -176,8 +181,10 @@ def project(camera: Camera, X, frame='w'):
     # Ymask = ((Ynorm > 1) + (Ynorm < -1)).detach()
     # Ynorm[Ymask] = 2.
 
-    # Return pixel coordinates
-    return torch.stack([Xnorm, Ynorm], dim=-1).view(B, H, W, 2)
+    pixel_coordinates = torch.stack([Xnorm, Ynorm], dim=-1).view(B, H, W, 2)
+    valid_mask = valid_mask.view(B, 1, H, W)
+
+    return pixel_coordinates, valid_mask if return_valid_mask else pixel_coordinates
 
 def reconstruct(camera: Camera, depth, frame='w'):
         """

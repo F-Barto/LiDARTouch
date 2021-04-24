@@ -47,7 +47,7 @@ class MultiViewLossHandler(LossHandler, LossBase):
         self.smoothness_loss_handler = losses.get('smoothness', None)
         self.hinted_loss_handler = losses.get('hinted', None)
 
-    def warp_ref_image(self, depth, ref_image, K, ref_K, pose):
+    def warp_ref_image(self, depth, ref_image, K, ref_K, pose, return_valid_mask=False):
         """
         Warps a reference image to produce a reconstruction of the original one.
         Parameters
@@ -76,12 +76,14 @@ class MultiViewLossHandler(LossHandler, LossBase):
         cam = Camera(K=K.float()).scaled(scale_factor).to(device)
         ref_cam = Camera(K=ref_K.float(), Tcw=pose).scaled(scale_factor).to(device)
 
-        ref_warped = view_synthesis(ref_image, depth, ref_cam, cam, padding_mode=self.photo_loss_handler.padding_mode)
+        ref_warped, valid_mask = view_synthesis(ref_image, depth, ref_cam, cam,
+                                                padding_mode=self.photo_loss_handler.padding_mode,
+                                                return_valid_mask=True)
 
         # Return warped reference image
-        return ref_warped
+        return ref_warped, valid_mask if return_valid_mask else ref_warped
 
-    def warp_ref_images(self, depths, ref_image, K, ref_K, pose):
+    def warp_ref_images(self, depths, ref_image, K, ref_K, pose, return_valid_mask=False):
         """
         Warps a reference image using `warp_ref_image` to reconstructs a target image.
         This is done at each scale.
@@ -104,9 +106,19 @@ class MultiViewLossHandler(LossHandler, LossBase):
             List of Warped reference images (reconstructing the target view from source ones)
         """
 
-        return [self.warp_ref_image(depths[i], ref_image, K, ref_K, pose) for i in range(self.n)]
+        if not return_valid_mask:
+            return [self.warp_ref_image(depths[i], ref_image, K, ref_K, pose) for i in range(self.n)]
 
-    def reduce_loss(self, losses, name, reduce_op='min', mask=None, failure_masks=None):
+        warped_imgs = []
+        valid_masks = []
+        for i in range(self.n):
+            warped_img, valid_mask = self.warp_ref_image(depths[i], ref_image, K, ref_K, pose, return_valid_mask=True)
+            warped_imgs.append(warped_img)
+            valid_masks.append(valid_mask)
+
+        return warped_imgs, valid_masks
+
+    def reduce_loss(self, losses, name, reduce_op='min', lidar_masks=None, failure_masks=None, valid_reproj_masks=None):
         """
         Combine the loss from all context images
         Parameters
@@ -120,31 +132,65 @@ class MultiViewLossHandler(LossHandler, LossBase):
         """
 
         # Reduce function
-        def reduce_function(losses, failure_mask=None):
-            if failure_mask is not None:
-                cat = torch.cat(losses, 1)
-                masked_cat = cat + 1000 * failure_mask
-                argmins = masked_cat.argmin(1, True)
-                out = cat.gather(1, argmins)
-                if mask is not None:
-                    out = out[mask]
+        def reduce_function(losses, lidar_mask=None, failure_masks=None, valid_reproj_masks=None):
+
+            inf_value = -torch.log(torch.tensor(0.))
+            cat_losses = torch.cat(losses, 1)
+
+            bool_masks = [] # container for masks indicating on which pixels loss must (not) be computed
+            min_masks = [] # container for masks indicating which pixels can't be taken in the min reduction
+
+            # lidar_mask is False on pixels with LiDAR data True otherwise (RGB only)
+            if lidar_mask is not None:
+                bool_masks.append(lidar_mask)
+
+            if valid_reproj_masks is not None:
+                # False for portion of images invalid across all views, True if a pixel is valid in any views
+                or_valid_reproj_masks = valid_reproj_masks.sum(1).bool()
+                bool_masks.append(or_valid_reproj_masks)
+                valid_min_mask = inf_value * (~valid_reproj_masks) # inf value on invalid pixels so they aren't selected
+                min_masks.append(valid_min_mask)
+
+            if failure_masks is not None:
+                failure_min_mask = inf_value * failure_masks
+                min_masks.append(failure_min_mask)
+
+            bool_mask = None
+            if len(bool_masks) > 0:
+                bool_mask = torch.cat(min_masks, 1).mul(1).bool() # logical and across valid masks
+
+            if reduce_op == 'min':
+                if len(min_masks) > 0:
+                    min_mask = torch.stack(min_masks, 0).sum(0,keepdim=True).squeeze(0)
+                    mask_cat_losses = cat_losses + min_mask # add inf value on invalid pixels so they aren't selected
+                    argmins = mask_cat_losses.argmin(1, True)
+                else:
+                    argmins = cat_losses.argmin(1, True)
+
+                out = cat_losses.gather(1, argmins)
+                if bool_mask is not None:
+                    out = out[bool_mask]
                 return out.mean()
 
             elif reduce_op == 'mean':
-                return sum([l.mean() for l in losses]) / len(losses)
-            elif reduce_op == 'min':
-                if mask is None:
-                    return torch.cat(losses, 1).min(1, True)[0].mean()
-                else:
-                    return torch.cat(losses, 1).min(1, True)[0][mask].mean()
+                out = cat_losses.mean(1)
+                if bool_mask is not None:
+                    out = out[bool_mask]
+                return out.mean()
             else:
                 raise NotImplementedError(f'Unknown reduce_op: {reduce_op}')
 
         # Reduce photometric loss
-        if failure_masks is not None:
-            reduced_loss = sum([reduce_function(losses[i], failure_masks[i]) for i in range(self.n)]) / self.n
-        else:
-            reduced_loss = sum([reduce_function(losses[i]) for i in range(self.n)]) / self.n
+        if failure_masks is None:
+            failure_masks = [None for _ in range(self.n)]
+        if valid_reproj_masks is None:
+            valid_reproj_masks = [None for _ in range(self.n)]
+        if lidar_masks is None:
+            lidar_masks = [None for _ in range(self.n)]
+
+        reduced_loss = sum([reduce_function(losses[i], lidar_masks[i], failure_masks[i], valid_reproj_masks[i])
+                            for i in range(self.n)]) / self.n
+
         # Store and return reduced photometric loss
         self.add_metric(name, reduced_loss)
         return reduced_loss
@@ -173,6 +219,10 @@ class MultiViewLossHandler(LossHandler, LossBase):
         #self.n = self.progressive_scaling(progress)
 
         photometric_losses = [[] for _ in range(self.n)] # Container for losses computed with estimpated depth
+        valid_reproj_masks = [[] for _ in range(self.n)]
+        gt_photometric_losses = [[] for _ in range(self.n)]  # Container for losses computed with GT depth if required
+
+        ################################ mask to handle PnP pose estiamtion failures ##################################
         hinted_failure_masks=None
         failure_masks = None
         if failure_checks is not None:
@@ -199,20 +249,20 @@ class MultiViewLossHandler(LossHandler, LossBase):
         target_images = match_scales(target_view, inv_depths, self.n)
         depths = [inv2depth(inv_depths[i]) for i in range(self.n)]
 
-        if self.hinted_loss_handler is not None:
+        if self.hinted_loss_handler is not None or self.masked:
             assert gt_depth is not None, "Ground Truth depth is required as input for the hinted loss"
-            gt_photometric_losses = [[] for _ in range(self.n)] # Container for losses computed with GT depth
             gt_depths = match_scales(gt_depth, inv_depths, self.n)
 
 
         for (source_view, pose) in zip(source_views, poses):
 
             # Calculate warped images
-            ref_warped = self.warp_ref_images(depths, source_view, K, K, pose)
+            ref_warped, valid_masks = self.warp_ref_images(depths, source_view, K, K, pose, return_valid_mask=True)
             # Calculate and store image loss
             photometric_loss =  self.photo_loss_handler.calc_photometric_loss(ref_warped, target_images)
             for i in range(self.n):
                 photometric_losses[i].append(photometric_loss[i])
+                valid_reproj_masks[i].append(valid_masks[i])
 
             # If using automask
             if self.photo_loss_handler.automask_loss:
@@ -225,23 +275,36 @@ class MultiViewLossHandler(LossHandler, LossBase):
             # If hinted loss required
             if self.hinted_loss_handler is not None:
                 # Calculate warped images from get_depth
-                ref_gt_warped = self.warp_ref_images(gt_depths, source_view, K, K, pose)
+                ref_gt_warped, valid_masks = self.warp_ref_images(gt_depths, source_view, K, K, pose,
+                                                                  return_valid_mask=True)
                 # Calculate and store image loss
                 gt_photometric_loss =  self.photo_loss_handler.calc_photometric_loss(ref_gt_warped, target_images)
                 for i in range(self.n):
                     gt_depth_mask = (gt_depths[i] <= 0).float().detach()
                     # set loss for missing gt pixels to be high so they are never chosen as minimum
                     gt_photometric_losses[i].append(gt_photometric_loss[i] + 1000. * gt_depth_mask)
+                    valid_reproj_masks[i].append(valid_masks[i])
 
-        # Calculate reduced loss
-        mask = None
+        #################################### Calculate reduced photometric loss ####################################
+
+        # only compute photo loss where there is no LiDAR
+        lidar_masks = None
         if self.masked:
             assert gt_depth is not None, "Ground Truth depth is required as input to mask photo loss on LiDAR points"
-            mask = (gt_depth <= 0.).detach() # only compute photo loss where there is no LiDAR
-        photo_loss = self.reduce_loss(photometric_losses, 'photometric_loss', mask=mask, failure_masks=failure_masks)
+            lidar_masks = [(gt_depth <= 0.).detach() for gt_depth in gt_depths]
+
+        if self.photo_loss_handler.automask_loss:
+            valid_reproj_masks = None
+        else:
+            valid_reproj_masks = [torch.cat(valid_masks, 1).bool() for valid_masks in valid_reproj_masks]
+
+        photo_loss = self.reduce_loss(photometric_losses, 'photometric_loss', lidar_masks=lidar_masks,
+                                      failure_masks=failure_masks, valid_reproj_masks=valid_reproj_masks)
 
         # make a list as in-place sum is not auto-grad friendly
         losses = [photo_loss]
+
+        #################################### Calculate other losses ####################################
 
         if self.hinted_loss_handler is not None:
             depth_hints_loss = self.hinted_loss_handler(photometric_losses, gt_photometric_losses, inv_depths,
@@ -255,6 +318,8 @@ class MultiViewLossHandler(LossHandler, LossBase):
             self.merge_metrics(self.smoothness_loss_handler)
 
         total_loss = sum(losses)
+
+        #################################### check for nan ####################################
 
         if torch.isnan(total_loss):
             total_loss = torch.zeros_like(total_loss, requires_grad=True)
