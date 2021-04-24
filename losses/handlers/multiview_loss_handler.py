@@ -284,7 +284,7 @@ class MultiViewLossHandler(LossHandler, LossBase):
                     gt_depth_mask = (gt_depths[i] <= 0).float().detach()
                     # set loss for missing gt pixels to be high so they are never chosen as minimum
                     gt_photometric_losses[i].append(gt_photometric_loss[i] + 1000. * gt_depth_mask)
-                    valid_reproj_masks[i].append(valid_masks[i])
+                    #valid_reproj_masks[i].append(valid_masks[i])
 
         #################################### Calculate reduced photometric loss ####################################
 
