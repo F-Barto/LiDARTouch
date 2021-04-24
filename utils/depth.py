@@ -188,6 +188,8 @@ def compute_depth_metrics(gt, pred, crop='garg', min_depth=1e-3, max_depth=80.0,
         x1, x2 = int(0.03594771 * gt_width), int(0.96405229 * gt_width)
         crop_mask[y1:y2, x1:x2] = 1
 
+    cnt = 0
+
     # For each depth map
     for pred_i, gt_i in zip(pred, gt):
         gt_i, pred_i = torch.squeeze(gt_i), torch.squeeze(pred_i)
@@ -198,6 +200,9 @@ def compute_depth_metrics(gt, pred, crop='garg', min_depth=1e-3, max_depth=80.0,
         # Stop if there are no remaining valid pixels
         if valid.sum() == 0:
             continue
+        else:
+            cnt += 1
+
         # Keep only valid pixels
         gt_i, pred_i = gt_i[valid], pred_i[valid]
         # Ground-truth median scaling if needed
@@ -219,6 +224,10 @@ def compute_depth_metrics(gt, pred, crop='garg', min_depth=1e-3, max_depth=80.0,
         rmse += torch.sqrt(torch.mean(diff_i ** 2))
         rmse_log += torch.sqrt(torch.mean((torch.log(gt_i) -
                                            torch.log(pred_i)) ** 2))
+
+    if cnt == 0:
+        return None
+
     # Return average values for each metric
     avg_metrics = [metric / batch_size for metric in [abs_rel, sq_rel, rmse, rmse_log, abs_diff, a1, a2, a3]]
 

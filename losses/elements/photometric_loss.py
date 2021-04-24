@@ -168,6 +168,7 @@ class PhotometricLoss(LossBase):
         photometric_loss : torch.Tensor [1]
             Photometric loss
         """
+
         # L1 loss
         l1_loss = [torch.abs(t_est[i] - images[i]) for i in range(self.n)]
         # SSIM loss
@@ -185,7 +186,8 @@ class PhotometricLoss(LossBase):
             for i in range(self.n):
                 mean, std = photometric_loss[i].mean(), photometric_loss[i].std()
                 photometric_loss[i] = torch.clamp(
-                    photometric_loss[i], max=float(mean + self.clip_loss * std))
+                    photometric_loss[i], max=float(mean + self.clip_loss * std)
+                )
+
         # Return total photometric loss
         return photometric_loss
-

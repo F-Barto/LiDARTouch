@@ -518,6 +518,11 @@ class SequentialKittiLoader(Dataset):
 
                 sample['poses_pnp'] = pose_vecs
                 sample['failure_checks'] = failure_checks
+                # return the target image in place of source when PnP fails
+                for i, failure_check in enumerate(failure_checks):
+                    if failure_check > 0.:
+                        sample['source_views'][i] = img
+
                 if self.load_pose:
                     sample['translation_magnitudes'] = translation_magnitudes
             else:
