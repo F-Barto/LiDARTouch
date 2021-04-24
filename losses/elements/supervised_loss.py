@@ -187,7 +187,7 @@ class SupervisedLoss(LossBase):
                         print('masked_inv_depth: ', masked_inv_depth, file=sys.stderr)
                         print('len(masked_inv_depth): ', len(masked_inv_depth), file=sys.stderr)
                         print('supervised loss: ', loss, file=sys.stderr)
-                    loss = torch.zeros_like(loss, requires_grad=True)
+                    loss = torch.tensor(0.)
 
                 losses.append(loss)
 
