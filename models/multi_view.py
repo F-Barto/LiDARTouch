@@ -277,8 +277,8 @@ class MultiViewModel(BaseModel):
         """
         output = self(batch)
 
-        log_losses = output['loss'].detach().clone()
-        log_metrics = {k:v.detach().clone() for k,v in output['metrics'].items()}
+        log_losses = output['loss'].item()
+        log_metrics = {k:v for k,v in output['metrics'].items()}
 
         logs = self.log_train(log_losses, log_metrics)
 

@@ -67,7 +67,7 @@ class LossBase(nn.Module):
 
     def add_metric(self, key, val):
         """Add a new metric to the dictionary and detach it."""
-        self._metrics[key] = val.detach()
+        self._metrics[key] = val.item()
 
     def merge_metrics(self, loss):
         """Update metrics dict from another Loss object (ensure metrics values are detached by add_metric)."""
