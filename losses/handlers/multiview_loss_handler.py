@@ -134,7 +134,7 @@ class MultiViewLossHandler(LossHandler, LossBase):
         # Reduce function
         def reduce_function(losses, lidar_mask=None, failure_masks=None, valid_reproj_masks=None):
 
-            inf_value = -torch.log(torch.tensor(0.))
+            inf_value = 1e5
             cat_losses = torch.cat(losses, 1)
 
             bool_masks = [] # container for masks indicating on which pixels loss must (not) be computed
