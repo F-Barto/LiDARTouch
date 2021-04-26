@@ -118,7 +118,7 @@ class MultiViewModel(BaseModel):
         return losses, metrics
 
 
-    def compute_inv_depths(self, image, sparse_depth=None, intrinsics=None):
+    def compute_inv_depths(self, image, sparse_depth=None, intrinsics=None, **kwargs):
         """Computes inverse depth maps from single images"""
 
         flip = random.random() < 0.5 if self.training else False
