@@ -225,7 +225,7 @@ def main(checkpoint_base_dir, run_dir_names, sparse_data_root_dir, semantic_root
     report_dir_name = \
         f'eval_on_{test_img_size[0]}x{test_img_size[1]}_{str_eval_on_raw}_{str_gt_scaled}{str_lidar_input}'
     report_dir = Path(report_root_dir) / report_dir_name
-    report_dir.mkdir(parents=True, exist_ok=True)
+    report_dir.mkdir(mode=0o0700, parents=True, exist_ok=True)
 
 
     print('Evaluating given runs....')
@@ -274,6 +274,8 @@ def main(checkpoint_base_dir, run_dir_names, sparse_data_root_dir, semantic_root
 
     semantic_root_dir = Path(semantic_root_dir)
 
+    result_file = report_dir / 'perfs.csv'
+
     for i, run_name in enumerate(run_list):
 
         print('*' * 90)
@@ -313,20 +315,20 @@ def main(checkpoint_base_dir, run_dir_names, sparse_data_root_dir, semantic_root
 
         if i == 0:
 
-            cols = [name.split('/')[1] for name in outputs['results'].keys()]
-            cols = ['run_name'] + cols
-            cols = '\t'.join(cols)
-            cols += '\n'
-
-            with open(str(report_dir / 'perfs.csv'), 'a') as f:
-                f.write(cols)
+            if result_file.exists() and result_file.stat().st_size > 0:
+                cols = [name.split('/')[1] for name in outputs['results'].keys()]
+                cols = ['run_name'] + cols
+                cols = '\t'.join(cols)
+                cols += '\n'
+                with open(str(result_file), 'a') as f:
+                    f.write(cols)
 
             cam_images_dir = report_dir / 'cam_images'
-            cam_images_dir.mkdir(parents=True, exist_ok=True)
+            cam_images_dir.mkdir(mode=0o0700, parents=True, exist_ok=True)
             sparse_lidar_dir = report_dir / 'sparse_lidar'
-            sparse_lidar_dir.mkdir(parents=True, exist_ok=True)
+            sparse_lidar_dir.mkdir(mode=0o0700, parents=True, exist_ok=True)
             gt_depths_dir = report_dir / 'gt_depths'
-            gt_depths_dir.mkdir(parents=True, exist_ok=True)
+            gt_depths_dir.mkdir(mode=0o0700, parents=True, exist_ok=True)
 
             for file_name, img in zip(outputs['filenames'], outputs['cam_images']):
                 plt.figure(figsize=figsize)
@@ -352,7 +354,7 @@ def main(checkpoint_base_dir, run_dir_names, sparse_data_root_dir, semantic_root
             for file_name, tuple_inputs in zip(outputs['filenames'], outputs['augmented_inputs']):
                 for j, brightness_aug_img in enumerate(tuple_inputs[0]):
                     brightness_factor_dir = cam_images_dir / f'brightness_factor={brightness_factors[j]}'
-                    brightness_factor_dir.mkdir(parents=True, exist_ok=True)
+                    brightness_factor_dir.mkdir(mode=0o0700, parents=True, exist_ok=True)
 
                     plt.figure(figsize=figsize)
                     plt.imshow(brightness_aug_img)
@@ -366,17 +368,17 @@ def main(checkpoint_base_dir, run_dir_names, sparse_data_root_dir, semantic_root
         line = '\t'.join(line)
         line += '\n'
 
-        with open(str(report_dir / 'perfs.csv'), 'a') as f:
+        with open(str(result_file), 'a') as f:
             f.write(line)
 
         run_report_dir = report_dir / run_name
 
         vanilla_dir = run_report_dir / 'vanilla'
-        vanilla_dir.mkdir(parents=True, exist_ok=True)
+        vanilla_dir.mkdir(mode=0o0700, parents=True, exist_ok=True)
         luminosity_dir = run_report_dir / 'luminosity'
-        luminosity_dir.mkdir(parents=True, exist_ok=True)
+        luminosity_dir.mkdir(mode=0o0700, parents=True, exist_ok=True)
         lidar_shutdown_dir = run_report_dir / 'lidar_shutdown'
-        lidar_shutdown_dir.mkdir(parents=True, exist_ok=True)
+        lidar_shutdown_dir.mkdir(mode=0o0700, parents=True, exist_ok=True)
 
         for file_name, img in zip(outputs['filenames'], outputs['inv_depths']):
             plt.figure(figsize=figsize)
@@ -397,14 +399,13 @@ def main(checkpoint_base_dir, run_dir_names, sparse_data_root_dir, semantic_root
             # plot brightness aug
             for j, brightness_output in enumerate(augmented_output[0]):
                 brightness_factor_dir = luminosity_dir / f'brightness_factor={brightness_factors[j]}'
-                brightness_factor_dir.mkdir(parents=True, exist_ok=True)
+                brightness_factor_dir.mkdir(mode=0o0700, parents=True, exist_ok=True)
 
                 plt.figure(figsize=figsize)
                 plt.imshow(brightness_output, cmap=cmap)
                 plt.gca().axis('off')
                 plt.savefig(str(brightness_factor_dir / f'{file_name}.png'), dpi=dpi, bbox_inches='tight', pad_inches=0)
                 plt.close()
-
 
 if __name__ == '__main__':
     main()
