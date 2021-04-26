@@ -241,15 +241,19 @@ def load_model_trainer(model_cls, ckpt_path):
 
 
 def get_best_ckt_name(ckpt_names, max_epoch=None):
+    '''
+
+    max_epoch: ensure that returned checkpoint has been trained for fewer epochs than max_epoch
+    '''
     min_val = None
-    min_ckpt_name = None
+    min_ckpt_name = 'last.ckpt'
     for ckpt_name in ckpt_names:
         if 'epoch' in ckpt_name:
             epoch = int(ckpt_name.split('=')[1][:4])
             epoch = True if max_epoch is None else epoch <= max_epoch
             metric_val = float(ckpt_name.split('=')[-1])
             min_val = metric_val if min_val is None or metric_val <= min_val else min_val
-            min_ckpt_name = ckpt_name if min_val is None or (metric_val <= min_val and epoch) else min_ckpt_name
+            min_ckpt_name = ckpt_name if min_val and epoch else min_ckpt_name
     return min_ckpt_name
 
 

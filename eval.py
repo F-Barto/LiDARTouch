@@ -235,6 +235,11 @@ def main(checkpoint_base_dir, run_dir_names, sparse_data_root_dir, semantic_root
     checkpoint_base_dir = Path(checkpoint_base_dir)
     run_list = sorted(run_dir_names.split(','))
 
+    for run in run_list:
+        ckpt_names = sorted([d.stem for d in (checkpoint_base_dir / run / 'version_0').iterdir()])
+        assert len(ckpt_names) > 0, run
+
+    # init trainer and dataset
     ckpt_names = sorted([d.stem for d in (checkpoint_base_dir / run_list[0] / 'version_0').iterdir()])
     best_ckpt_name = get_best_ckt_name(ckpt_names)
     ckpt_path = get_ckpt_path(checkpoint_base_dir, run_list[0], ckpt_name=best_ckpt_name)
@@ -288,10 +293,10 @@ def main(checkpoint_base_dir, run_dir_names, sparse_data_root_dir, semantic_root
 
         run_dir = checkpoint_base_dir / run_name / 'version_0'
         ckpt_names = sorted([d.stem for d in run_dir.iterdir()])
-        print('ckpt_names:')
+        print('found checkpoint names:')
         pprint(ckpt_names)
         best_ckpt_name = get_best_ckt_name(ckpt_names, max_epoch=None)
-        print('best_ckpt_name: ', best_ckpt_name)
+        print('best checkpoint found: ', best_ckpt_name)
         ckpt_path = get_ckpt_path(checkpoint_base_dir, run_name, ckpt_name=best_ckpt_name)
         model, _ = load_model_trainer(MultiViewModel, ckpt_path)
 
