@@ -36,19 +36,26 @@ Then, install dependencies and activate env.
 # create conda env and install dependancies 
 conda env create -n Depth_env -f environment.yml
 conda activate Depth_env
- ```  
+ ``` 
+
+### NLSPN
+refer to https://github.com/zzangjinsun/NLSPN_ECCV20 for CUDA version if needed
+
+```
+conda env create -n NLSPN -f environment_NLSPN.yml
+conda activate NLSPN
+```
+
+pull NLSPN somewhere and install non local conv
+```
+git clone https://github.com/zzangjinsun/NLSPN_ECCV20.git 
+cd ./NLSPN_ECCV20/src/model/deformconv
+sh make.sh
+
+```
 
 ### ACMNet
-
-Require CUDA 10.0 installed and add to .bashrc
-
-```
-export CUDA_ROOT=/path/to/cuda/cuda-10.0
-export LD_LIBRARY_PATH=$CUDA_ROOT/lib64
-export CUDA_HOME=$CUDA_ROOT
-export LIBRARY_PATH=$LD_LIBRARY_PATH
-export PATH=$CUDA_ROOT/bin:$PATH
-```
+refer to https://github.com/sshan-zhao/ACMNet#environment for CUDA version if needed
 
 ```
 conda env create -n ACMNet -f environment_ACMNet.yml
@@ -58,9 +65,8 @@ conda activate ACMNet
 then install pointlib
 ```
 git pull ACMNet somewhere
-cd [...]/ACMNet
+cd ./ACMNet
 pip install pointlib/.
-cd [...]/Depth
 ```
 
 ---

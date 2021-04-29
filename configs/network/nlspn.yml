@@ -1,0 +1,14 @@
+input_channels: 3
+
+network:
+  tri_checkpoint_path: ???
+  depth_net:
+    name: nlspn
+    options:
+      version: resnet18
+  pose_net:
+    name: monodepth2
+    options:
+      version: 18
+      activation: elu
+      input_channels: ${input_channels}
