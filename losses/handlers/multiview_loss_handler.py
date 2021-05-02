@@ -118,7 +118,7 @@ class MultiViewLossHandler(LossHandler, LossBase):
 
         return warped_imgs, valid_masks
 
-    def reduce_loss(self, losses, name, reduce_op='min', lidar_masks=None, failure_masks=None, valid_reproj_masks=None):
+    def reduce_loss(self, losses, name, reduce_op='min', non_lidar_masks=None, failure_masks=None, valid_reproj_masks=None):
         """
         Combine the loss from all context images
         Parameters
@@ -132,7 +132,7 @@ class MultiViewLossHandler(LossHandler, LossBase):
         """
 
         # Reduce function
-        def reduce_function(losses, lidar_mask=None, failure_masks=None, valid_reproj_masks=None):
+        def reduce_function(losses, non_lidar_mask=None, failure_masks=None, valid_reproj_masks=None):
 
             inf_value = 1e5
             cat_losses = torch.cat(losses, 1)
@@ -140,12 +140,12 @@ class MultiViewLossHandler(LossHandler, LossBase):
             bool_masks = [] # container for masks indicating on which pixels loss must (not) be computed
             min_masks = [] # container for masks indicating which pixels can't be taken in the min reduction
 
-            # lidar_mask is False on pixels with LiDAR data True otherwise (RGB only)
-            if lidar_mask is not None:
-                bool_masks.append(lidar_mask)
+            # non_lidar_mask is True on pixels without LiDAR data and False otherwise (RGB only)
+            if non_lidar_mask is not None:
+                bool_masks.append(non_lidar_mask)
 
             if valid_reproj_masks is not None:
-                # valid_reproj_masks is False for portion of images invalid across all views
+                # or_valid_reproj_masks is False for portion of images invalid across all views
                 # True if a pixel is valid in any views
                 or_valid_reproj_masks = valid_reproj_masks.sum(1, True).bool()
                 bool_masks.append(or_valid_reproj_masks)
@@ -186,10 +186,10 @@ class MultiViewLossHandler(LossHandler, LossBase):
             failure_masks = [None for _ in range(self.n)]
         if valid_reproj_masks is None:
             valid_reproj_masks = [None for _ in range(self.n)]
-        if lidar_masks is None:
-            lidar_masks = [None for _ in range(self.n)]
+        if non_lidar_masks is None:
+            non_lidar_masks = [None for _ in range(self.n)]
 
-        reduced_loss = sum([reduce_function(losses[i], lidar_masks[i], failure_masks[i], valid_reproj_masks[i])
+        reduced_loss = sum([reduce_function(losses[i], non_lidar_masks[i], failure_masks[i], valid_reproj_masks[i])
                             for i in range(self.n)]) / self.n
 
         # Store and return reduced photometric loss
@@ -289,17 +289,17 @@ class MultiViewLossHandler(LossHandler, LossBase):
         #################################### Calculate reduced photometric loss ####################################
 
         # only compute photo loss where there is no LiDAR
-        lidar_masks = None
+        non_lidar_masks = None
         if self.masked:
             assert gt_depth is not None, "Ground Truth depth is required as input to mask photo loss on LiDAR points"
-            lidar_masks = [(gt_depth <= 0.).detach() for gt_depth in gt_depths]
+            non_lidar_masks = [(gt_depth <= 0.).detach() for gt_depth in gt_depths]
 
         if self.photo_loss_handler.automask_loss:
             valid_reproj_masks = None
         else:
             valid_reproj_masks = [torch.cat(valid_masks, 1).bool() for valid_masks in valid_reproj_masks]
 
-        photo_loss = self.reduce_loss(photometric_losses, 'photometric_loss', lidar_masks=lidar_masks,
+        photo_loss = self.reduce_loss(photometric_losses, 'photometric_loss', non_lidar_masks=non_lidar_masks,
                                       failure_masks=failure_masks, valid_reproj_masks=valid_reproj_masks)
 
         # make a list as in-place sum is not auto-grad friendly
