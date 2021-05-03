@@ -38,6 +38,27 @@ conda env create -n Depth_env -f environment.yml
 conda activate Depth_env
  ```  
 
+### GuideNet
+Require CUDA 10.1 installed and $CUDA_HOME set 
+```
+conda env create -n GuideNet -f environment_guidenet.yml
+conda activate GuideNet
+```
+
+install torch-encoding
+```
+git clone https://github.com/zhanghang1989/PyTorch-Encoding.git
+pip install Pytorch-Encoding/.
+```
+
+compile C++ and CUDA code
+```
+git clone https://github.com/kakaxi314/GuideNet.git
+cd GuideNet
+cd exts
+python setup.py install
+```
+
 ### ACMNet
 
 Require CUDA 10.0 installed and add to .bashrc

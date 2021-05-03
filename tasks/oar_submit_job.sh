@@ -4,7 +4,7 @@
 source ~/.bashrc
 . gpu_setVisibleDevices.sh
 
-conda activate Depth_geometric
+conda activate GuideNet
 
 #WANBKEY=$(<../wandb.key) # load the key from a file at root dir
 #wandb login $WANBKEY

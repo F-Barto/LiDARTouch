@@ -1,0 +1,24 @@
+channels:
+  - pytorch
+  - defaults
+  - conda-forge
+dependencies:
+  - python>=3.6.3 # to avoid 3.6.0 issue https://github.com/pytorch/pytorch/issues/14931
+  - pip>=20.0
+  - pytorch>=1.4,<1.5
+  - torchvision==0.5.0
+  - cudatoolkit>=10.1,<10.2
+  - scikit-learn
+  - scikit-image
+  - matplotlib
+  - jupyter
+  - pytorch-lightning==0.8.1
+  - pip:
+    - pillow
+    - omegaconf==2.0.0
+    - opencv-python
+    - opencv-contrib-python
+    - ruamel.yaml
+    - wandb
+    - click
+
