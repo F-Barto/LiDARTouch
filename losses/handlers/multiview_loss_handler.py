@@ -150,11 +150,11 @@ class MultiViewLossHandler(LossHandler, LossBase):
                 or_valid_reproj_masks = valid_reproj_masks.sum(1, True).bool()
                 bool_masks.append(or_valid_reproj_masks)
                 valid_min_mask = inf_value * (~valid_reproj_masks) # inf value on invalid pixels so they aren't selected
-                min_masks.append(valid_min_mask)
+                min_masks.append(valid_min_mask.float())
 
             if failure_masks is not None:
                 failure_min_mask = inf_value * failure_masks
-                min_masks.append(failure_min_mask)
+                min_masks.append(failure_min_mask.float())
 
             bool_mask = None
             if len(bool_masks) > 0:
