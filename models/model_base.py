@@ -15,6 +15,7 @@ import copy
 
 import pytorch_lightning as pl
 from pytorch_lightning import _logger as terminal_logger
+import matplotlib.pyplot as plt
 
 from models.geometric_dataloader import DataLoader
 
@@ -169,9 +170,12 @@ class BaseModel(pl.LightningModule):
         elif self.hparams.logger == TENSORBOARD_LOGGER_KEY:
             for images_title, figure in aggregated_images.items():
                 self.logger.experiment.add_figure(images_title, figure, global_step=self.current_epoch)
+
             logs = avg_metrics_values
         else:
             logs = avg_metrics_values
+
+        plt.close('all')
 
         return logs
 
