@@ -53,7 +53,7 @@ def main(project_config, hparams, resume=False):
     base_output_dir = Path(project_config.output_dir) / project_config.project_name
 
     logs_dir = base_output_dir / 'logs'
-    logs_dir.mkdir(parents=True, exist_ok=True)
+    logs_dir.mkdir(mode=0o0700, parents=True, exist_ok=True)
 
     experiment_output_dir = base_output_dir / 'outputs' / project_config.experiment_name
 
@@ -118,7 +118,7 @@ def main(project_config, hparams, resume=False):
         else:
             run_output_dir = experiment_output_dir / 'no_version_system'
 
-        run_output_dir.mkdir(parents=True, exist_ok=True)
+        run_output_dir.mkdir(mode=0o0700,parents=True, exist_ok=True)
         run_output_dir = str(run_output_dir)
 
         checkpoint_callback = ModelCheckpoint(
