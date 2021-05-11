@@ -62,7 +62,9 @@ def batch_filename_to_semseg_path(filename):
 
 def eval_with_outputs(model, dataloader, log_interval, brightness_factors, semantic_root_dir, collate_fn):
     list_of_metrics = []
+    dict_of_intervals_metrics = {}
     list_of_semseg_metrics = []
+    list_of_center_semseg_metrics = []
     outputs = []
     originals = []
 
@@ -98,15 +100,39 @@ def eval_with_outputs(model, dataloader, log_interval, brightness_factors, seman
             if metrics is not None:
                 list_of_metrics.append(metrics)
 
+            hparams_metric = copy.deepcopy(model.hparams.metrics)
+            min_depth = hparams_metric.pop('min_depth', 0.01)
+            max_depth = hparams_metric.pop('max_depth', 80.)
+            intervals = np.linspace(0., max_depth, int(max_depth/10)+1).astype(float)
+            intervals[0] = min_depth
+
+            for i in range(len(intervals)-1):
+                prefix = f'{intervals[i]}-{intervals[i+1]}'
+                metrics = compute_depth_metrics(gt=batch['projected_lidar'], pred=depth, min_depth=intervals[i],
+                                                max_depth=intervals[i+1], **hparams_metric)
+                if metrics is not None:
+                    if prefix not in dict_of_intervals_metrics:
+                        dict_of_intervals_metrics[prefix] = [metrics]
+
             # Compute semseg filtered metrics
             batch_semgseg_relative_paths = [batch_filename_to_semseg_path(filename) for filename in batch_filenames]
             semsegs = [np.array(Image.open(semantic_root_dir / rel_path)) for rel_path in batch_semgseg_relative_paths]
-            semsegs = torch.tensor(semsegs).to(batch['target_view'].device).unsqueeze(0)
-            semsegs = F.interpolate(semsegs, size=batch['target_view'].shape[-2:], mode='nearest')
+            semsegs = torch.tensor(semsegs).to(batch['target_view'].device).unsqueeze(0).float()
+            semsegs = F.interpolate(semsegs, size=batch['target_view'].shape[-2:], mode='nearest').int()
             mask = (semsegs == 55).squeeze()  # True for pixel of cars False otherwise
             metrics = compute_depth_metrics(gt=batch['projected_lidar'], pred=depth, mask=mask, **model.hparams.metrics)
             if metrics is not None:
                 list_of_semseg_metrics.append(metrics)
+
+            h, w = batch['target_view'].shape[-2:]
+            center_mask = torch.zeros((h, w), device=batch['target_view'].device).bool()
+            y1, y2 = int(0.15 * h), int(0.95 * h)
+            x1, x2 = int(0.25 * w), int(0.75 * w)
+            center_mask[y1:y2, x1:x2] = True
+            mask = mask & center_mask
+            metrics = compute_depth_metrics(gt=batch['projected_lidar'], pred=depth, mask=mask, **model.hparams.metrics)
+            if metrics is not None:
+                list_of_center_semseg_metrics.append(metrics)
 
             # Calculate augmented predicted metrics
             aug_inputs = gen_augmented_inputs(brightness_factors, model.test_dataset,
@@ -144,10 +170,19 @@ def eval_with_outputs(model, dataloader, log_interval, brightness_factors, seman
                     lidar_shutdown_output = untensor(lidar_shutdown_output, to_int=False)[:, :, 0]
                     augmented_outputs.append((brightness_adjusted_outputs, lidar_shutdown_output))
 
+
     avg_metrics_values = average_metrics(list_of_metrics, prefix='test')
     avg_metrics_values = {k: float(v.cpu().numpy()) for k, v in avg_metrics_values.items()}
 
-    avg_semseg_metrics_values = average_metrics(list_of_semseg_metrics, prefix='test/semseg')
+    for k,v in dict_of_intervals_metrics.items():
+        avg_interval_metrics_values = average_metrics(v, prefix='test/'+k)
+        avg_metrics_values.update(avg_interval_metrics_values)
+
+    avg_semseg_metrics_values = average_metrics(list_of_semseg_metrics, prefix='test/car_semseg')
+    avg_semseg_metrics_values = {k: float(v.cpu().numpy()) for k, v in avg_semseg_metrics_values.items()}
+    avg_metrics_values.update(avg_semseg_metrics_values)
+
+    avg_semseg_metrics_values = average_metrics(list_of_center_semseg_metrics, prefix='test/center_car_semseg')
     avg_semseg_metrics_values = {k: float(v.cpu().numpy()) for k, v in avg_semseg_metrics_values.items()}
     avg_metrics_values.update(avg_semseg_metrics_values)
 
@@ -307,7 +342,6 @@ def main(checkpoint_base_dir, run_dir_names, sparse_data_root_dir, semantic_root
             'crop': 'garg',
             'min_depth': 0.001,
             'max_depth': 80.,
-            'use_gt_scale': True
         }
 
         model.eval()
