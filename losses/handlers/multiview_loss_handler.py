@@ -35,10 +35,7 @@ class MultiViewLossHandler(LossHandler, LossBase):
         else:
             self.masked = False
 
-
-
         self.photo_loss_handler = None
-
         self.photo_loss_handler = losses['photo'] if 'photo' in losses else None
         assert self.photo_loss_handler is not None, "You have to parametrize the photometric loss"
 
@@ -243,7 +240,7 @@ class MultiViewLossHandler(LossHandler, LossBase):
                 if self.hinted_loss_handler is not None:
                     failure_mask = torch.cat([base_failure_mask, failure_mask], dim=1)
                     hinted_failure_masks.append(failure_mask)
-                    # e,g: for len(poses) = 2
+                    # e,g: for len(poses) = 2 and automask=True
                     # hinted_failure_mask: [gt_photo1,gt_photo2,photo1,automask1,photo2,automask2]
 
 
@@ -318,7 +315,7 @@ class MultiViewLossHandler(LossHandler, LossBase):
             losses.append(smoothness_loss)
             self.merge_metrics(self.smoothness_loss_handler)
 
-        total_loss = sum(losses)
+        total_loss = torch.sum(torch.stack(losses))
 
         #################################### check for nan ####################################
 
