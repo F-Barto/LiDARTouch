@@ -1,0 +1,4 @@
+_target_: lidartouch.networks.depth_nets.s2d.Sparse2Dense
+layers: 34
+modality: 'rgbd'
+pretrained: False

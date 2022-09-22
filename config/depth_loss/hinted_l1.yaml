@@ -1,0 +1,4 @@
+_target_: lidartouch.losses.depth_loss.hinted_regression.HintedRegressionLoss
+regression_method: sparse-l1
+num_scales: 4
+depth_loss_weight: 1.0

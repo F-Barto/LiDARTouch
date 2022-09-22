@@ -1,0 +1,7 @@
+defaults:
+  - kitti_sfm_lidarsup.yaml
+
+load_pose: 'pnp'
+
+
+

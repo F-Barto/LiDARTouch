@@ -1,0 +1,20 @@
+# @package _global_
+
+# to execute this experiment run:
+# python train.py experiment=[name_of_experiment]
+
+defaults:
+  - override /datamodule: kitti_sfm_pnp.yaml
+  - override /model: sfm_depth_gtpose.yaml
+  - override /trainer: ddp.yaml
+  - override /depth_net: monodepth2lidar.yaml
+  - override /depth_optimizer: adam.yaml
+  - override /depth_scheduler: step_lr.yaml
+  - override /smooth_loss: smoothness.yaml
+  - override /reconstruction_loss: ssim_l1.yaml
+
+# all parameters below will be merged with parameters from default configurations set above
+# this allows you to overwrite only specified parameters
+
+
+

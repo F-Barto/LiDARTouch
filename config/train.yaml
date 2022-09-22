@@ -1,0 +1,56 @@
+# @package _global_
+
+# specify here default training configuration
+defaults:
+  - _self_
+  - datamodule: fullysup.yaml
+  - depth_net: monodepth2lidar.yaml
+  - depth_optimizer: adam.yaml
+  - depth_scheduler: step_lr.yaml
+  - pose_net: null
+  - pose_optimizer: null
+  - pose_scheduler: null
+  - model: fully_sup.yaml
+  - smooth_loss: smoothness.yaml
+  - depth_loss: null
+  - pose_loss: null
+  - reconstruction_loss: null
+  - callbacks: default.yaml
+  - logger: tensorboard.yaml
+  - trainer: default.yaml
+  - log_dir: default.yaml
+
+  # experiment configs allow for version control of specific configurations
+  # e.g. best hyperparameters for each combination of model and datamodule
+  - experiment: null
+
+  # debugging config (enable through command line, e.g. `python train.py debug=default)
+  - debug: null
+
+  # config for hyperparameter optimization
+  - hparams_search: null
+
+  # enable color logging
+  - override hydra/hydra_logging: colorlog
+  - override hydra/job_logging: colorlog
+
+
+# pretty print config at the start of the run using Rich library
+print_config: True
+
+# disable python warnings if they annoy you
+ignore_warnings: True
+
+# set False to skip model training
+train: True
+
+# evaluate on test set, using best model weights achieved during training
+# lightning chooses best weights based on the metric specified in checkpoint callback
+test: True
+
+# seed for random number generators in pytorch, numpy and python.random
+seed: 84924 # 42 * 2022
+
+# default name for the experiment, determines logging folder path
+# (you can overwrite this name in experiment configs)
+name: "default"

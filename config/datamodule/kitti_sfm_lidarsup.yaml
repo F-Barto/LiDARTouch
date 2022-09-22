@@ -1,0 +1,5 @@
+defaults:
+  - kitti_sfm.yaml
+
+train_gt_usage: 'sparse'
+val_gt_usage: 'gt'

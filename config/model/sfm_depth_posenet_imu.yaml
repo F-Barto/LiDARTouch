@@ -1,0 +1,4 @@
+defaults:
+  - sfm_depth_posenet.yaml
+
+_target_: lidartouch.models.sfm_depth_posenet_imu.SfMDepthPoseNetIMU

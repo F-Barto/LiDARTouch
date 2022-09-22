@@ -1,0 +1,11 @@
+_target_: lidartouch.losses.reconstruction.masked_ssim_l1.Masked_SSIM_L1
+ssim_loss_weight: 0.85
+C1: 1e-4
+C2: 9e-4
+clip_loss: 0.0
+kernel_size: 3
+num_scales: 4
+reprojection_masking: False
+automasking: True
+padding_mode: 'zeros'
+align_corners: True

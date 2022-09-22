@@ -1,0 +1,13 @@
+# https://wandb.ai
+
+wandb:
+  _target_: pytorch_lightning.loggers.wandb.WandbLogger
+  project: "SemanticBEV"
+  name: ${name}
+  save_dir: ${oc.env:SAVEDIR}
+  offline: True
+  id: null # pass correct id to resume experiment!
+  log_model: False
+
+
+

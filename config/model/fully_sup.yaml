@@ -1,0 +1,13 @@
+_target_: lidartouch.models.fully_supervised.FullySupervised
+metrics_hparams:
+  crop: garg
+  min_depth: 1e-3
+  max_depth: 80.0
+  use_gt_scale: False
+depth_scheduler_interval: epoch
+train_flip_input: true
+logger: tensorboard
+train_log_images_interval: 500
+val_log_images_interval: 100
+upsample_depth_maps: true
+

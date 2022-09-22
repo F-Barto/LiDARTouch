@@ -1,0 +1,14 @@
+defaults:
+  - default.yaml
+
+sparse_depth_root_dir: ${oc.env:SPARSE_DEPTH_ROOT_DIR}
+
+train_gt_usage: 'sparse'
+val_gt_usage: 'gt'
+
+
+
+
+
+
+

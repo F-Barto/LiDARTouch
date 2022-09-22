@@ -1,0 +1,18 @@
+_target_: lidartouch.networks.depth_nets.monodepth2_lidar.Monodepth2LiDAR
+activation: elu
+image_extractor_name: resnet
+image_extractor_hparams:
+  version: 18        # choices=[18, 34, 50, 101, 152]
+  input_channels: 3
+  zero_init_residual: False
+lidar_extractor_name: lidar-resnet
+lidar_extractor_hparams:
+  version: 18        # choices=[18, 34, 50, 101, 152]
+  input_channels: 1
+  zero_init_residual: False
+  small: False
+  inv_input_depth: True
+decoder_hparams:
+  predictor: inv_depth
+  upsample_mode: nearest
+fusion_name: concat

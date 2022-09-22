@@ -1,0 +1,10 @@
+_target_: lidartouch.networks.depth_nets.monodepth2.DepthNetMonodepth2
+activation: elu
+encoder_options:
+  version: 18        # choices=[18, 34, 50, 101, 152]
+  input_channels: 3
+  zero_init_residual: False
+decoder_options:
+  scales: 4
+  predictor: inv_depth
+  upsample_mode: nearest

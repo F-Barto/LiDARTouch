@@ -1,0 +1,42 @@
+# @package _global_
+
+# specify here default evaluation configuration
+defaults:
+  - data: default.yaml # choose the datamodule for evaluation
+  - _self_
+  - depth_optimizer: null
+  - depth_scheduler: null
+  - pose_optimizer: null
+  - pose_scheduler: null
+  - model: fully_sup.yaml
+  - smooth_loss: null
+  - depth_loss: null
+  - pose_loss: null
+  - reconstruction_loss: null
+  - callbacks: null
+  - logger: null
+  - trainer: default.yaml
+  - log_dir: evaluation.yaml
+
+  - experiment: null
+
+  # enable color logging
+  - override hydra/hydra_logging: colorlog
+  - override hydra/job_logging: colorlog
+
+print_config: True
+
+ignore_warnings: True
+
+seed: null
+
+name: "default"
+
+data:
+  split_file: ${oc.env:TEST_SPLIT_FILE}
+  batch_size: 4
+  val_gt_usage: 'gt'
+  train_gt_usage: null
+
+# passing checkpoint path is necessary
+ckpt_path: ???

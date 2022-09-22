@@ -1,0 +1,20 @@
+defaults:
+  - default.yaml
+
+sparse_depth_root_dir: ${oc.env:SPARSE_DEPTH_ROOT_DIR}
+split_data: ${oc.env:SPLIT_DATA}
+
+train_gt_usage: null
+val_gt_usage: 'gt'
+source_views_indexes:
+  - -1
+  - 1
+random_source: 0
+load_pose: 'imu'
+
+# augmentations
+lidar_drop: null
+crop_size: null
+trim_top: False
+gt_sparse_depth_dilation: False
+

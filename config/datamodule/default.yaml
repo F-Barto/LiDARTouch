@@ -1,0 +1,24 @@
+_target_: lidartouch.datamodules.kitti.sfm_datamodule.KITTIRawSfMDataModule
+kitti_raw_root_dir: ${oc.env:KITTI_RAW_ROOT_DIR}
+gt_depth_root_dir: ${oc.env:GT_DEPTH_ROOT_DIR}
+split_file: ${oc.env:SPLIT_FILE}
+val_split_file: ${oc.env:VAL_SPLIT_FILE}
+
+pin_memory: True
+num_workers: 10
+batch_size: 2
+
+image_shape: [384, 1280]
+input_channels: 3
+jittering: [0.2, 0.2, 0.2, 0.05]
+
+
+
+
+
+
+
+
+
+
+

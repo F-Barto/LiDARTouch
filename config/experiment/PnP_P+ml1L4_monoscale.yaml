@@ -1,0 +1,14 @@
+# @package _global_
+
+# to execute this experiment run:
+# python train.py experiment=[name_of_experiment]
+
+defaults:
+  - PnP_P+ml1L4_multiscale.yaml
+
+smooth_loss:
+  num_scales: 1
+reconstruction_loss:
+  num_scales: 1
+depth_loss:
+  num_scales: 1

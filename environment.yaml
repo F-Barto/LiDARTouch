@@ -1,0 +1,30 @@
+channels:
+  - pytorch
+  - defaults
+  - conda-forge
+dependencies:
+  - python>=3.9
+  - cudatoolkit>=10.1
+  - pytorch
+  - torchvision
+  - pip
+  - scikit-learn
+  - scikit-image
+  - scipy
+  - matplotlib
+  - h5py
+  - pandas
+  - jupyter
+  - pip:
+    - pytorch-lightning>=1.5.10
+    - torchmetrics>=0.7.0
+    - hydra-core>=1.1.0
+    - hydra-colorlog>=1.1.0
+    - watermark
+    - opencv-python
+    - click
+    - wandb
+    - einops
+    - pykitti
+    - python-dotenv     # loading env variables from .env file
+    - rich              # beautiful text formatting in terminal

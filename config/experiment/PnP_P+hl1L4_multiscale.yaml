@@ -1,0 +1,9 @@
+# @package _global_
+
+# to execute this experiment run:
+# python train.py experiment=[name_of_experiment]
+
+defaults:
+  - PnP_P+ml1L4_multiscale.yaml
+  - override /reconstruction_loss: hinted.yaml
+  - override /depth_loss: hinted_l1.yaml

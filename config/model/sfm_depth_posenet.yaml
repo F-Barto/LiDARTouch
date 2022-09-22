@@ -1,0 +1,5 @@
+defaults:
+  - fully_sup.yaml
+
+_target_: lidartouch.models.sfm_depth_posenet.SfMDepthPoseNet
+posenet_scheduler_interval: epoch
