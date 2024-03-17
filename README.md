@@ -14,6 +14,7 @@
 <a href="https://hydra.cc/"><img alt="Config: Hydra" src="https://img.shields.io/badge/Config-Hydra-89b8cd"></a>
 <a href="https://github.com/ashleve/lightning-hydra-template"><img alt="Template" src="https://img.shields.io/badge/-Lightning--Hydra--Template-017F2F?style=flat&logo=github&labelColor=gray"></a><br>
 [![Paper](http://img.shields.io/badge/paper-arxiv.2109.03569-B31B1B.svg)](https://arxiv.org/abs/2109.03569)
+[![Journal](http://img.shields.io/badge/CVIU-2023-eb6500.svg)](https://www.sciencedirect.com/science/article/abs/pii/S1077314222001795)
 
 
 This is the reference PyTorch implementation for training and testing depth prediction models using the method described 
@@ -113,9 +114,10 @@ python ./prepare_split_data.py \
 ```
 use `--help` for more details.
 
-### Paths configuration
+### Step 3: Paths configuration
 
-Change the paths present in the `.env` file to configure the saving dir and the path to your dataset.
+Copy and rename the file `.env_example` to `.env`.
+Change the paths present in the `.env` file to configure the saving dir, the paths to your dataset and the pre-processed data.
 
 ## 🏋️ Training <a name="training"></a>
 
@@ -133,8 +135,6 @@ Monodepth2-L depth network with LiDARTouch supervision (metric depth | NO infini
 ```
 python train.py experiment=PnP_P+ml1L4_multiscale depth_net=monodepth2lidar
 ```
-
-If you would like to use other neural network architectures please refer to [**TODO**].
 
 Regarding the infinite depth problem, the two major factors alleviating it are the auto-masking and the LiDAR self-supervision.
 In practice, we found multi-scale supervision and the smoothness loss to be critical for stable training when using the LiDAR self-supervision.
